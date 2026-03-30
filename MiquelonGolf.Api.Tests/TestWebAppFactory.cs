@@ -37,6 +37,14 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Testing");
     }
 
+    public void ResetDatabase()
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.EnsureDeleted();
+        db.Database.EnsureCreated();
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);

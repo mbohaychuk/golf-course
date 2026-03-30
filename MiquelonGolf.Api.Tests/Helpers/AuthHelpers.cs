@@ -7,7 +7,6 @@ public static class AuthHelpers
 {
     public static async Task<string> GetAdminTokenAsync(HttpClient client)
     {
-        // Register then log in as admin — seeded in factory or registered on first call
         var register = await client.PostAsJsonAsync("/api/auth/register", new
         {
             email = "admin@test.com",
@@ -17,7 +16,13 @@ public static class AuthHelpers
             role = "Admin"
         });
 
-        // If already registered (409), that's fine — just log in
+        if (!register.IsSuccessStatusCode && register.StatusCode != System.Net.HttpStatusCode.Conflict)
+        {
+            var error = await register.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(
+                $"Admin registration failed with {register.StatusCode}: {error}");
+        }
+
         var login = await client.PostAsJsonAsync("/api/auth/login", new
         {
             email = "admin@test.com",
