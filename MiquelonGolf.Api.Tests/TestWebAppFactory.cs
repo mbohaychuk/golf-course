@@ -1,5 +1,6 @@
 // MiquelonGolf.Api.Tests/TestWebAppFactory.cs
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -18,10 +19,16 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
-            // Remove real DbContext registration
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
-            if (descriptor != null) services.Remove(descriptor);
+            // Remove all DbContext-related registrations to avoid dual-provider conflict
+            var toRemove = services
+                .Where(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>)
+                    || d.ServiceType == typeof(AppDbContext)
+                    || (d.ServiceType.IsGenericType &&
+                        d.ServiceType.GetGenericTypeDefinition().FullName ==
+                        "Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration`1" &&
+                        d.ServiceType.GenericTypeArguments[0] == typeof(AppDbContext)))
+                .ToList();
+            foreach (var d in toRemove) services.Remove(d);
 
             // Replace with SQLite in-memory
             services.AddDbContext<AppDbContext>(options =>
@@ -32,6 +39,15 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
+
+            // Seed Identity roles
+            var roleManager = scope.ServiceProvider
+                .GetRequiredService<RoleManager<IdentityRole>>();
+            foreach (var role in new[] { "Admin", "Member", "Public" })
+            {
+                if (!roleManager.RoleExistsAsync(role).GetAwaiter().GetResult())
+                    roleManager.CreateAsync(new IdentityRole(role)).GetAwaiter().GetResult();
+            }
         });
 
         builder.UseEnvironment("Testing");
