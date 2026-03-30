@@ -19,6 +19,9 @@ public class BookingsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest request)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
+
         var slot = await _db.TeeTimeSlots
             .Include(s => s.Bookings)
             .FirstOrDefaultAsync(s => s.Id == request.TeeTimeSlotId);
@@ -45,6 +48,7 @@ public class BookingsController : ControllerBase
 
         _db.Bookings.Add(booking);
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         var response = ToResponse(booking, slot);
         return CreatedAtAction(nameof(GetById), new { id = booking.Id }, response);

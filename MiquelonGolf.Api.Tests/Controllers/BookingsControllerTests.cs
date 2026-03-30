@@ -53,6 +53,7 @@ public class BookingsControllerTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var booking = await response.Content.ReadFromJsonAsync<BookingDto>();
         Assert.Equal("John Doe", booking!.GolferName);
+        Assert.Equal(2, booking!.NumberOfPlayers);
     }
 
     [Fact]
@@ -106,6 +107,10 @@ public class BookingsControllerTests : IClassFixture<TestWebAppFactory>
 
     private record SlotDto(Guid Id, string Date, string StartTime,
         int MaxPlayers, bool IsBlocked, string? BlockReason, int BookingCount);
-    private record BookingDto(Guid Id, Guid TeeTimeSlotId, string GolferName,
-        string GolferEmail, string Status);
+    private record BookingDto(
+        Guid Id, Guid TeeTimeSlotId,
+        string SlotDate, string SlotTime,
+        string GolferName, string GolferEmail, string GolferPhone,
+        int NumberOfPlayers, int NumberOfCarts,
+        string Status, DateTime BookedAt);
 }
