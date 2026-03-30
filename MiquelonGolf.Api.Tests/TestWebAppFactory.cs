@@ -59,6 +59,14 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.EnsureDeleted();
         db.Database.EnsureCreated();
+
+        var roleManager = scope.ServiceProvider
+            .GetRequiredService<RoleManager<IdentityRole>>();
+        foreach (var role in new[] { "Admin", "Member", "Public" })
+        {
+            if (!roleManager.RoleExistsAsync(role).GetAwaiter().GetResult())
+                roleManager.CreateAsync(new IdentityRole(role)).GetAwaiter().GetResult();
+        }
     }
 
     protected override void Dispose(bool disposing)

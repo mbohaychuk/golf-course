@@ -8,9 +8,14 @@ namespace MiquelonGolf.Api.Tests.Controllers;
 public class AuthControllerTests : IClassFixture<TestWebAppFactory>
 {
     private readonly HttpClient _client;
+    private readonly TestWebAppFactory _factory;
 
     public AuthControllerTests(TestWebAppFactory factory)
-        => _client = factory.CreateClient();
+    {
+        _factory = factory;
+        _factory.ResetDatabase();
+        _client = factory.CreateClient();
+    }
 
     [Fact]
     public async Task Register_ValidRequest_Returns200WithToken()
@@ -20,14 +25,13 @@ public class AuthControllerTests : IClassFixture<TestWebAppFactory>
             email = "newuser@test.com",
             password = "Password1!",
             firstName = "John",
-            lastName = "Smith",
-            role = "Admin"
+            lastName = "Smith"
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
         Assert.NotNull(body?.Token);
-        Assert.Equal("Admin", body?.Role);
+        Assert.Equal("Public", body?.Role);
     }
 
     [Fact]
@@ -38,8 +42,7 @@ public class AuthControllerTests : IClassFixture<TestWebAppFactory>
             email = "login@test.com",
             password = "Password1!",
             firstName = "Jane",
-            lastName = "Doe",
-            role = "Admin"
+            lastName = "Doe"
         });
 
         var response = await _client.PostAsJsonAsync("/api/auth/login", new
@@ -61,8 +64,7 @@ public class AuthControllerTests : IClassFixture<TestWebAppFactory>
             email = "badlogin@test.com",
             password = "Password1!",
             firstName = "Bad",
-            lastName = "Login",
-            role = "Admin"
+            lastName = "Login"
         });
 
         var response = await _client.PostAsJsonAsync("/api/auth/login", new

@@ -41,8 +41,7 @@ public class AuthController : ControllerBase
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
-        var validRoles = new[] { "Admin", "Member", "Public" };
-        var role = validRoles.Contains(request.Role) ? request.Role : "Public";
+        var role = "Public";
         await _userManager.AddToRoleAsync(user, role);
 
         var token = _tokenService.GenerateToken(user, role);
@@ -56,11 +55,15 @@ public class AuthController : ControllerBase
         if (user == null) return Unauthorized();
 
         var result = await _signInManager.CheckPasswordSignInAsync(
-            user, request.Password, lockoutOnFailure: false);
+            user, request.Password, lockoutOnFailure: true);
         if (!result.Succeeded) return Unauthorized();
 
         var roles = await _userManager.GetRolesAsync(user);
         var role = roles.FirstOrDefault() ?? "Public";
+
+        if (string.IsNullOrEmpty(user.Email))
+            return Unauthorized();
+
         var token = _tokenService.GenerateToken(user, role);
         return Ok(new AuthResponse(token, user.Id, role));
     }
