@@ -83,5 +83,6 @@ public class TeeTimeSlotsControllerTests : IClassFixture<TestWebAppFactory>
 
     private record TeeTimeSlotDto(
         Guid Id, string Date, string StartTime,
-        int MaxPlayers, bool IsBlocked, int BookingCount);
+        int MaxPlayers, bool IsBlocked,
+        string? BlockReason, int BookingCount);
 }
