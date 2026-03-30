@@ -54,6 +54,12 @@ public class TeeTimeSlotsController : ControllerBase
             return BadRequest("Invalid openTime format. Use HH:mm.");
         if (!TimeOnly.TryParse(request.CloseTime, out var closeTime))
             return BadRequest("Invalid closeTime format. Use HH:mm.");
+        if (request.IntervalMinutes <= 0)
+            return BadRequest("intervalMinutes must be greater than 0.");
+        if (openTime >= closeTime)
+            return BadRequest("openTime must be earlier than closeTime.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
 
         var existing = await _db.TeeTimeSlots
             .Include(s => s.Bookings)
@@ -65,6 +71,7 @@ public class TeeTimeSlotsController : ControllerBase
             date, request.IntervalMinutes, openTime, closeTime, request.MaxPlayers);
         _db.TeeTimeSlots.AddRange(slots);
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         var response = slots.Select(s => new TeeTimeSlotResponse(
             s.Id, s.Date.ToString("yyyy-MM-dd"), s.StartTime.ToString("HH:mm"),

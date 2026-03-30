@@ -39,6 +39,8 @@ public class TeeTimeSlotsControllerTests : IClassFixture<TestWebAppFactory>
         var slots = await response.Content
             .ReadFromJsonAsync<List<TeeTimeSlotDto>>();
         Assert.Equal(12, slots!.Count); // 08:00–10:00 @ 10min = 12 slots
+
+        _client.DefaultRequestHeaders.Authorization = null;
     }
 
     [Fact]
