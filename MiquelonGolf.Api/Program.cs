@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MiquelonGolf.Api.Data;
 using MiquelonGolf.Api.Models;
+using MiquelonGolf.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,7 +49,8 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-// TODO: register ITokenService in Task 5, ITeeTimeService in Task 7
+builder.Services.AddScoped<ITokenService, TokenService>();
+// TODO: register ITeeTimeService in Task 7
 
 builder.Services.AddCors(options =>
 {
