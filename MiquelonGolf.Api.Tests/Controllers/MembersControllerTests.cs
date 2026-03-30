@@ -53,13 +53,14 @@ public class MembersControllerTests : IClassFixture<TestWebAppFactory>
     public async Task GetMembers_AsAdmin_ReturnsAll()
     {
         await SetAdminAuthAsync();
-        await _client.PostAsJsonAsync("/api/members", new
+        var seedResponse = await _client.PostAsJsonAsync("/api/members", new
         {
             firstName = "List", lastName = "Test", email = "list@test.com",
             membershipType = "Senior", memberSince = "2010-01-01",
             seasonYear = 2026, purchaseDate = "2026-04-01",
             expiryDate = "2026-10-31", cartTrackage = false, seasonalCartRental = false
         });
+        Assert.Equal(HttpStatusCode.Created, seedResponse.StatusCode);
 
         var response = await _client.GetAsync("/api/members");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

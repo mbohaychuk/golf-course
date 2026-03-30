@@ -34,7 +34,7 @@ public class MembersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMemberRequest request)
     {
-        if (!Enum.TryParse<MembershipType>(request.MembershipType, out var type))
+        if (!Enum.TryParse<MembershipType>(request.MembershipType, ignoreCase: true, out var type))
             return BadRequest("Invalid MembershipType.");
         if (!DateOnly.TryParse(request.MemberSince, out var memberSince))
             return BadRequest("Invalid memberSince date.");
@@ -70,7 +70,7 @@ public class MembersController : ControllerBase
         var member = await _db.Members.FindAsync(id);
         if (member == null) return NotFound();
 
-        if (!Enum.TryParse<MembershipType>(request.MembershipType, out var type))
+        if (!Enum.TryParse<MembershipType>(request.MembershipType, ignoreCase: true, out var type))
             return BadRequest("Invalid MembershipType.");
         if (!DateOnly.TryParse(request.PurchaseDate, out var purchaseDate))
             return BadRequest("Invalid purchaseDate.");
