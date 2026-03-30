@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MiquelonGolf.Api.Tests/MiquelonGolf.Api.Tests.csproj" />
+  <Project Path="MiquelonGolf.Api/MiquelonGolf.Api.csproj" />
+</Solution>
