@@ -25,7 +25,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+    throw new InvalidOperationException("Jwt:Key must be configured and at least 32 characters long.");
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -52,8 +54,14 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        var origins = builder.Configuration["Cors:AllowedOrigins"]?.Split(',')
-            ?? ["http://localhost:3000"];
+        var originsConfig = builder.Configuration["Cors:AllowedOrigins"];
+        if (string.IsNullOrWhiteSpace(originsConfig))
+        {
+            if (!builder.Environment.IsDevelopment())
+                throw new InvalidOperationException("Cors:AllowedOrigins must be configured in production.");
+            originsConfig = "http://localhost:3000";
+        }
+        var origins = originsConfig.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         policy.WithOrigins(origins).AllowAnyMethod().AllowAnyHeader();
     });
 });
