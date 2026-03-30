@@ -15,6 +15,9 @@ public class TokenService : ITokenService
 
     public string GenerateToken(ApplicationUser user, string role)
     {
+        if (string.IsNullOrEmpty(user.Email))
+            throw new ArgumentException("User must have an email address to generate a token.", nameof(user));
+
         var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -24,7 +27,7 @@ public class TokenService : ITokenService
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(ClaimTypes.Email, user.Email!),
+            new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Role, role),
             new Claim(ClaimTypes.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName),

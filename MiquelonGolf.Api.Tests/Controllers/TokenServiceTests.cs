@@ -1,7 +1,9 @@
 // MiquelonGolf.Api.Tests/Controllers/TokenServiceTests.cs
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using MiquelonGolf.Api.Models;
 using MiquelonGolf.Api.Services;
 using Xunit;
@@ -40,9 +42,21 @@ public class TokenServiceTests
         var token = _sut.GenerateToken(user, "Admin");
 
         var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(token);
-        Assert.Equal("user-123", jwt.Subject);
-        Assert.Equal("Admin", jwt.Claims.First(c => c.Type == ClaimTypes.Role).Value);
-        Assert.Equal("test@example.com", jwt.Claims.First(c => c.Type == ClaimTypes.Email).Value);
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes("super-secret-test-key-that-is-long-enough")),
+            ValidateIssuer = true,
+            ValidIssuer = "TestIssuer",
+            ValidateAudience = true,
+            ValidAudience = "TestAudience",
+            ValidateLifetime = true,
+        };
+        var principal = handler.ValidateToken(token, validationParams, out var validatedToken);
+        var jwtToken = (JwtSecurityToken)validatedToken;
+        Assert.Equal("user-123", jwtToken.Subject);
+        Assert.Equal("Admin", principal.FindFirst(ClaimTypes.Role)?.Value);
+        Assert.Equal("test@example.com", principal.FindFirst(ClaimTypes.Email)?.Value);
     }
 }
