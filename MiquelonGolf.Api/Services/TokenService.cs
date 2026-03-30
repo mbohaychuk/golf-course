@@ -18,8 +18,10 @@ public class TokenService : ITokenService
         if (string.IsNullOrEmpty(user.Email))
             throw new ArgumentException("User must have an email address to generate a token.", nameof(user));
 
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        var jwtKey = _config["Jwt:Key"];
+        if (string.IsNullOrEmpty(jwtKey))
+            throw new InvalidOperationException("Jwt:Key is not configured.");
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var expiry = DateTime.UtcNow.AddMinutes(
             double.Parse(_config["Jwt:ExpiryMinutes"] ?? "1440"));
