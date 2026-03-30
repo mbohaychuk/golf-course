@@ -36,6 +36,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    options.UseSecurityTokenValidators = true; // Use JwtSecurityTokenHandler (compatible with IdentityModel 8.x)
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -50,7 +51,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<ITokenService, TokenService>();
-// TODO: register ITeeTimeService in Task 7
+builder.Services.AddScoped<ITeeTimeService, TeeTimeService>();
 
 builder.Services.AddCors(options =>
 {
