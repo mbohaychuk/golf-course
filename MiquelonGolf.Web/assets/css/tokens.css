@@ -1,0 +1,8 @@
+/* MiquelonGolf.Web/assets/css/tokens.css */
+:root {
+  --color-primary:    #2D5016;  /* deep forest green */
+  --color-accent:     #8B6914;  /* warm brown */
+  --color-background: #F5F0E8;  /* warm cream */
+  --color-surface:    #FFFFFF;  /* cards, nav */
+  --color-text:       #1C1C1C;  /* body copy */
+}

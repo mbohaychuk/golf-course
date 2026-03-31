@@ -1,1 +1,19 @@
-/* placeholder — will be replaced in Task 2 */
+/* MiquelonGolf.Web/assets/css/main.css */
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+    color: var(--color-accent);
+  }
+}
