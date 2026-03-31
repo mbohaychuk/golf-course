@@ -17,6 +17,7 @@ const bookingsError = ref<string | null>(null)
 const bookings = ref<BookingDto[]>([])
 
 const announcementsLoading = ref(true)
+const announcementsError = ref<string | null>(null)
 const announcements = ref<AnnouncementDto[]>([])
 
 async function loadDashboard() {
@@ -26,7 +27,7 @@ async function loadDashboard() {
       .catch(() => { bookingsError.value = 'Could not load bookings.' }),
     $fetch<AnnouncementDto[]>(api.url('/announcements/active'))
       .then(data => { announcements.value = data })
-      .catch(() => {}),
+      .catch(() => { announcementsError.value = 'Could not load alerts.' }),
   ])
   bookingsLoading.value = false
   announcementsLoading.value = false
@@ -68,7 +69,7 @@ onMounted(loadDashboard)
       </div>
       <div class="bg-surface rounded-lg shadow-sm p-4">
         <p class="text-xs text-text/50 uppercase tracking-wide mb-1">Active Alerts</p>
-        <p class="font-display text-3xl font-bold text-accent">{{ announcements.length }}</p>
+        <p class="font-display text-3xl font-bold text-accent">{{ announcementsLoading ? '…' : announcements.length }}</p>
       </div>
       <div class="bg-surface rounded-lg shadow-sm p-4">
         <p class="text-xs text-text/50 uppercase tracking-wide mb-1">Date</p>
@@ -86,7 +87,7 @@ onMounted(loadDashboard)
 
         <div v-if="bookingsLoading" class="p-6 text-center text-text/40 text-sm">Loading…</div>
         <div v-else-if="bookingsError" class="p-4 text-red-600 text-sm">{{ bookingsError }}</div>
-        <div v-else-if="bookings.length === 0" class="p-6 text-center text-text/40 text-sm">No bookings today.</div>
+        <div v-else-if="bookings.filter(b => b.status === 'Confirmed').length === 0" class="p-6 text-center text-text/40 text-sm">No bookings today.</div>
         <div v-else class="divide-y divide-gray-50">
           <div
             v-for="b in bookings.filter(b => b.status === 'Confirmed')"
@@ -110,6 +111,7 @@ onMounted(loadDashboard)
         </div>
 
         <div v-if="announcementsLoading" class="p-6 text-center text-text/40 text-sm">Loading…</div>
+        <div v-else-if="announcementsError" class="p-4 text-red-600 text-sm">{{ announcementsError }}</div>
         <div v-else-if="announcements.length === 0" class="p-6 text-center text-text/40 text-sm">No active alerts.</div>
         <div v-else class="divide-y divide-gray-50">
           <div v-for="a in announcements" :key="a.id" class="px-5 py-3 text-sm">
