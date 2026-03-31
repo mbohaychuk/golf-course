@@ -82,6 +82,25 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+// Seed 18 holes on startup if not present
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (!db.Holes.Any())
+    {
+        var holes = Enumerable.Range(1, 18).Select(n => new Hole
+        {
+            Id = Guid.NewGuid(),
+            HoleNumber = n,
+            Par = n % 3 == 0 ? 5 : n % 3 == 1 ? 4 : 3,
+            Handicap = n,
+            Description = string.Empty
+        });
+        db.Holes.AddRange(holes);
+        db.SaveChanges();
+    }
+}
+
 app.Run();
 
 public partial class Program { } // Required for WebApplicationFactory in tests

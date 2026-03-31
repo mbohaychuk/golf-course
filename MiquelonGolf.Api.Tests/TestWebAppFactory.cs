@@ -68,6 +68,21 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
                 userManager.CreateAsync(adminUser, adminPassword).GetAwaiter().GetResult();
                 userManager.AddToRoleAsync(adminUser, "Admin").GetAwaiter().GetResult();
             }
+
+            // Seed 18 holes if not already present
+            if (!db.Holes.Any())
+            {
+                var holes = Enumerable.Range(1, 18).Select(n => new MiquelonGolf.Api.Models.Hole
+                {
+                    Id = Guid.NewGuid(),
+                    HoleNumber = n,
+                    Par = n % 3 == 0 ? 5 : n % 3 == 1 ? 4 : 3,
+                    Handicap = n,
+                    Description = string.Empty
+                });
+                db.Holes.AddRange(holes);
+                db.SaveChanges();
+            }
         });
 
         builder.UseEnvironment("Testing");
@@ -114,6 +129,21 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             };
             userManager.CreateAsync(adminUser, adminPassword).GetAwaiter().GetResult();
             userManager.AddToRoleAsync(adminUser, "Admin").GetAwaiter().GetResult();
+        }
+
+        // Seed 18 holes if not already present
+        if (!db.Holes.Any())
+        {
+            var holes = Enumerable.Range(1, 18).Select(n => new MiquelonGolf.Api.Models.Hole
+            {
+                Id = Guid.NewGuid(),
+                HoleNumber = n,
+                Par = n % 3 == 0 ? 5 : n % 3 == 1 ? 4 : 3,
+                Handicap = n,
+                Description = string.Empty
+            });
+            db.Holes.AddRange(holes);
+            db.SaveChanges();
         }
     }
 

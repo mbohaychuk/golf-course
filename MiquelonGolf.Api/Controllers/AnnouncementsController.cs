@@ -62,7 +62,7 @@ public class AnnouncementsController : ControllerBase
 
         _db.Announcements.Add(announcement);
         await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetAll), new { }, ToResponse(announcement));
+        return StatusCode(201, ToResponse(announcement));
     }
 
     [HttpPut("{id:guid}")]

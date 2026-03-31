@@ -39,11 +39,12 @@ public class SiteContentController : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         var existing = await _db.SiteContents.FindAsync(key);
+        var now = DateTime.UtcNow;
 
         if (existing != null)
         {
             existing.Value = request.Value;
-            existing.LastUpdatedAt = DateTime.UtcNow;
+            existing.LastUpdatedAt = now;
             existing.UpdatedByUserId = userId;
         }
         else
@@ -52,12 +53,12 @@ public class SiteContentController : ControllerBase
             {
                 Key = key,
                 Value = request.Value,
-                LastUpdatedAt = DateTime.UtcNow,
+                LastUpdatedAt = now,
                 UpdatedByUserId = userId
             });
         }
 
         await _db.SaveChangesAsync();
-        return Ok(new SiteContentResponse(key, request.Value, DateTime.UtcNow));
+        return Ok(new SiteContentResponse(key, request.Value, now));
     }
 }
