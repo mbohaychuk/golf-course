@@ -60,7 +60,7 @@ async function generateSlots() {
     showGenerateForm.value = false
     await loadSlots()
   } catch (e: any) {
-    generateError.value = e?.data ?? 'Failed to generate slots.'
+    generateError.value = e?.data?.title ?? e?.data?.detail ?? 'Failed to generate slots.'
   } finally {
     generating.value = false
   }
@@ -68,6 +68,7 @@ async function generateSlots() {
 
 // Block / Unblock
 const blockingId = ref<string | null>(null)
+const blockError = ref<string | null>(null)
 const blockReasonInput = ref('')
 const showBlockModal = ref(false)
 const blockTargetId = ref<string | null>(null)
@@ -75,6 +76,7 @@ const blockTargetId = ref<string | null>(null)
 function openBlockModal(id: string) {
   blockTargetId.value = id
   blockReasonInput.value = ''
+  blockError.value = null
   showBlockModal.value = true
 }
 
@@ -90,7 +92,7 @@ async function blockSlot() {
     showBlockModal.value = false
     await loadSlots()
   } catch {
-    // ignore — slot list will show current state
+    blockError.value = 'Could not block slot. Please try again.'
   } finally {
     blockingId.value = null
   }
@@ -105,7 +107,7 @@ async function unblockSlot(id: string) {
     })
     await loadSlots()
   } catch {
-    // ignore
+    slotsError.value = 'Could not unblock slot. Please reload.'
   } finally {
     blockingId.value = null
   }
@@ -233,6 +235,7 @@ async function unblockSlot(id: string) {
             class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
         </div>
+        <div v-if="blockError" class="text-red-600 text-sm mb-3">{{ blockError }}</div>
         <div class="flex gap-3">
           <button class="flex-1 py-2 bg-red-600 text-white text-sm font-semibold rounded hover:opacity-90" @click="blockSlot">Block</button>
           <button class="flex-1 py-2 bg-gray-100 text-text text-sm font-semibold rounded hover:bg-gray-200" @click="showBlockModal = false">Cancel</button>
