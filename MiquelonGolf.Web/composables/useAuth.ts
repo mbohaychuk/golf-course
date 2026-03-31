@@ -1,6 +1,4 @@
 // MiquelonGolf.Web/composables/useAuth.ts
-import { navigateTo } from '#app'
-
 export function useAuth() {
   const config = useRuntimeConfig()
   const base = config.public.apiBase as string

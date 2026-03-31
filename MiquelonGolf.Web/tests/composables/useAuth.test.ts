@@ -3,15 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 
-const mockNavigateTo = vi.fn()
-
-vi.mock('#app', async () => {
-  const actual = await vi.importActual<typeof import('#app')>('#app')
-  return {
-    ...actual,
-    navigateTo: mockNavigateTo,
-  }
-})
+// navigateTo is auto-imported by Nuxt (transformed to import from '#app').
+// Must use mockNuxtImport so the stub is hoisted into the module system.
+// Container object avoids the hoisting closure trap.
+const navigateToMock = { fn: vi.fn() }
+mockNuxtImport('navigateTo', () => (...args: any[]) => navigateToMock.fn(...args))
 
 const tokenCookie = ref<string | null>(null)
 const roleCookie = ref<string | null>(null)
@@ -99,7 +95,7 @@ describe('useAuth', () => {
     logout()
     expect(tokenCookie.value).toBeNull()
     expect(roleCookie.value).toBeNull()
-    expect(mockNavigateTo).toHaveBeenCalledOnce()
-    expect(mockNavigateTo).toHaveBeenCalledWith('/admin/login')
+    expect(navigateToMock.fn).toHaveBeenCalledOnce()
+    expect(navigateToMock.fn).toHaveBeenCalledWith('/admin/login')
   })
 })
