@@ -3,6 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 
+const mockNavigateTo = vi.fn()
+
+vi.mock('#app', async () => {
+  const actual = await vi.importActual<typeof import('#app')>('#app')
+  return {
+    ...actual,
+    navigateTo: mockNavigateTo,
+  }
+})
+
 const tokenCookie = ref<string | null>(null)
 const roleCookie = ref<string | null>(null)
 
@@ -23,12 +33,9 @@ mockNuxtImport('useRuntimeConfig', () => () => ({
   public: { apiBase: 'http://api.test' },
 }))
 
-// $fetch and navigateTo are true Nuxt globals (not auto-imports)
+// $fetch is a true Nuxt global (not an auto-import)
 const mockFetch = vi.fn()
 vi.stubGlobal('$fetch', mockFetch)
-
-const mockNavigateTo = vi.fn()
-vi.stubGlobal('navigateTo', mockNavigateTo)
 
 const { useAuth } = await import('~/composables/useAuth')
 
@@ -92,5 +99,7 @@ describe('useAuth', () => {
     logout()
     expect(tokenCookie.value).toBeNull()
     expect(roleCookie.value).toBeNull()
+    expect(mockNavigateTo).toHaveBeenCalledOnce()
+    expect(mockNavigateTo).toHaveBeenCalledWith('/admin/login')
   })
 })
