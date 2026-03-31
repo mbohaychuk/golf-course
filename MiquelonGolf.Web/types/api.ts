@@ -37,3 +37,27 @@ export interface SiteContentDto {
   value: string
   lastUpdatedAt: string
 }
+
+export interface TeeTimeSlotDto {
+  id: string
+  date: string        // "YYYY-MM-DD"
+  startTime: string   // "HH:mm"
+  maxPlayers: number
+  isBlocked: boolean
+  blockReason: string | null
+  bookingCount: number
+}
+
+export interface BookingDto {
+  id: string
+  teeTimeSlotId: string
+  slotDate: string    // "YYYY-MM-DD"
+  slotTime: string    // "HH:mm"
+  golferName: string
+  golferEmail: string
+  golferPhone: string
+  numberOfPlayers: number
+  numberOfCarts: number
+  status: string      // "Confirmed" | "Cancelled"
+  bookedAt: string    // ISO datetime string
+}
