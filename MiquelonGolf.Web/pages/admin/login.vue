@@ -4,10 +4,7 @@ definePageMeta({ layout: false, ssr: false })
 
 useSeoMeta({ title: 'Admin Login — Miquelon Hills' })
 
-const { login, isAdmin } = useAuth()
-
-// Redirect if already logged in
-if (isAdmin.value) navigateTo('/admin')
+const { login } = useAuth()
 
 const form = reactive({ email: '', password: '' })
 const error = ref<string | null>(null)
