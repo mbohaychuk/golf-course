@@ -11,16 +11,16 @@ export function useApi() {
     return useFetch<T>(url(path), { ...opts })
   }
 
-  async function post<T>(path: string, body: unknown): Promise<T> {
-    return $fetch<T>(url(path), { method: 'POST', body })
+  async function post<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+    return $fetch<T>(url(path), { method: 'POST', body, headers })
   }
 
-  async function put<T>(path: string, body: unknown): Promise<T> {
-    return $fetch<T>(url(path), { method: 'PUT', body })
+  async function put<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+    return $fetch<T>(url(path), { method: 'PUT', body, headers })
   }
 
-  async function del(path: string): Promise<void> {
-    return $fetch(url(path), { method: 'DELETE' })
+  async function del(path: string, headers?: Record<string, string>): Promise<void> {
+    return $fetch(url(path), { method: 'DELETE', headers })
   }
 
   return { url, get, post, put, del }
