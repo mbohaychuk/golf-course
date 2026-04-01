@@ -55,16 +55,21 @@ async function cancelBooking(id: string) {
 // Add walk-in booking
 const showWalkInForm = ref(false)
 const slots = ref<TeeTimeSlotDto[]>([])
+const slotsLoading = ref(false)
+const slotsError = ref<string | null>(null)
 
 async function loadSlots() {
+  slotsLoading.value = true
+  slotsError.value = null
   try {
     slots.value = await $fetch<TeeTimeSlotDto[]>(api.url(`/tee-time-slots?date=${selectedDate.value}`))
   } catch {
+    slotsError.value = 'Could not load available slots.'
     slots.value = []
+  } finally {
+    slotsLoading.value = false
   }
 }
-
-watch(showWalkInForm, (open) => { if (open) loadSlots() })
 
 const walkInForm = reactive({
   teeTimeSlotId: '',
@@ -77,6 +82,22 @@ const walkInForm = reactive({
 const walkInSubmitting = ref(false)
 const walkInError = ref<string | null>(null)
 
+function resetWalkInForm() {
+  walkInForm.teeTimeSlotId = ''
+  walkInForm.golferName = ''
+  walkInForm.golferEmail = ''
+  walkInForm.golferPhone = ''
+  walkInForm.numberOfPlayers = 1
+  walkInForm.numberOfCarts = 0
+  walkInError.value = null
+  slotsError.value = null
+}
+
+watch(showWalkInForm, (open) => {
+  if (open) loadSlots()
+  else resetWalkInForm()
+})
+
 async function submitWalkIn() {
   walkInSubmitting.value = true
   walkInError.value = null
@@ -86,12 +107,6 @@ async function submitWalkIn() {
       body: { ...walkInForm },
     })
     showWalkInForm.value = false
-    walkInForm.teeTimeSlotId = ''
-    walkInForm.golferName = ''
-    walkInForm.golferEmail = ''
-    walkInForm.golferPhone = ''
-    walkInForm.numberOfPlayers = 1
-    walkInForm.numberOfCarts = 0
     await loadBookings()
   } catch (e: any) {
     walkInError.value = e?.data?.title ?? e?.data?.detail ?? 'Could not create booking.'
@@ -133,7 +148,10 @@ const confirmedBookings = computed(() => bookings.value.filter(b => b.status ===
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div class="sm:col-span-2">
           <label class="block text-xs font-medium text-text/60 mb-1" for="wi-slot">Tee Time</label>
+          <div v-if="slotsLoading" class="text-sm text-text/40 py-2">Loading slots…</div>
+          <div v-else-if="slotsError" class="text-sm text-red-600 py-2">{{ slotsError }}</div>
           <select
+            v-else
             id="wi-slot"
             v-model="walkInForm.teeTimeSlotId"
             required
