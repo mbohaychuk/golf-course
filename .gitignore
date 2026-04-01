@@ -3,6 +3,11 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+# Nuxt build output
+.nuxt/
+.output/
+.nitro/
+
 # dotenv files
 .env
 
