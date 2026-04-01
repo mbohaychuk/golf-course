@@ -82,10 +82,38 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Seed 18 holes on startup if not present
+// Seed roles, admin user, and 18 holes on startup
 using (var scope = app.Services.CreateScope())
 {
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Ensure roles exist
+    foreach (var role in new[] { "Admin", "Public" })
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+            await roleManager.CreateAsync(new IdentityRole(role));
+    }
+
+    // Seed default admin user if none exists
+    const string adminEmail = "admin@miquelonhills.com";
+    if (await userManager.FindByEmailAsync(adminEmail) == null)
+    {
+        var admin = new ApplicationUser
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            FirstName = "Admin",
+            LastName = "User",
+            EmailConfirmed = true
+        };
+        var result = await userManager.CreateAsync(admin, "Admin1234x");
+        if (result.Succeeded)
+            await userManager.AddToRoleAsync(admin, "Admin");
+    }
+
+    // Seed 18 holes if not present
     if (!db.Holes.Any())
     {
         var holes = Enumerable.Range(1, 18).Select(n => new Hole

@@ -2,6 +2,16 @@
 <script setup lang="ts">
 const mobileOpen = ref(false)
 const golfOpen = ref(false)
+const golfDropdownRef = ref<HTMLElement | null>(null)
+
+function handleClickOutside(event: MouseEvent) {
+  if (golfDropdownRef.value && !golfDropdownRef.value.contains(event.target as Node)) {
+    golfOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
@@ -14,7 +24,7 @@ const golfOpen = ref(false)
 
       <!-- Desktop links -->
       <ul class="hidden md:flex items-center gap-6 text-sm font-medium text-text">
-        <li class="relative group">
+        <li ref="golfDropdownRef" class="relative group">
           <button
             class="flex items-center gap-1 hover:text-accent transition-colors"
             @click="golfOpen = !golfOpen"
