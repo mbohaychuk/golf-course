@@ -61,3 +61,18 @@ export interface BookingDto {
   status: string      // "Confirmed" | "Cancelled"
   bookedAt: string    // ISO datetime string
 }
+
+export interface MemberDto {
+  id: string
+  firstName: string
+  lastName: string
+  email: string | null
+  phone: string | null
+  membershipType: 'Adult' | 'Senior' | 'Junior' | 'Family' | 'YoungAdult' | 'SeniorCouple'
+  memberSince: string        // YYYY-MM-DD (permanent — when they first joined the course)
+  seasonYear: number
+  purchaseDate: string       // YYYY-MM-DD
+  expiryDate: string         // YYYY-MM-DD
+  cartTrackage: boolean
+  seasonalCartRental: boolean
+}
