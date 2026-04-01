@@ -75,7 +75,11 @@ function openEdit(m: MemberDto) {
   formMode.value = 'edit'
 }
 
-function closeForm() { formMode.value = null }
+function closeForm() {
+  formMode.value = null
+  editingId.value = null
+  submitError.value = null
+}
 
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
@@ -130,8 +134,8 @@ async function deleteMember(id: string, name: string) {
   try {
     await $fetch(api.url(`/members/${id}`), { method: 'DELETE', headers: authHeaders.value })
     await loadMembers()
-  } catch {
-    alert('Could not remove member. Please try again.')
+  } catch (e: any) {
+    alert(e?.data?.title ?? e?.data?.detail ?? 'Could not remove member. Please try again.')
   } finally {
     deletingId.value = null
   }
