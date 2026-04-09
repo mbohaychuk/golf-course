@@ -1,6 +1,14 @@
 <!-- MiquelonGolf.Web/pages/book.vue -->
 <script setup lang="ts">
-import type { TeeTimeSlotDto, BookingDto } from '~/types/api'
+import type {
+  TeeTimeSlotDto,
+  BookingDto,
+  BookingSettingsDto,
+  OperatingHoursDto,
+  CourseHolidayDto,
+  CreateBookingPayload,
+  RoundType,
+} from '~/types/api'
 
 useSeoMeta({
   title: 'Book a Tee Time — Miquelon Hills Golf Course',
@@ -9,87 +17,106 @@ useSeoMeta({
 
 const api = useApi()
 
-// ── Step state ──────────────────────────────────────────────
-const step = ref<1 | 2 | 3 | 4>(1)
+// ── Wizard step state ──────────────────────────────────────
+const step = ref<1 | 2 | 3>(1)
 
-// ── Step 1: Date picker ──────────────────────────────────────
-const today = ref('')
-const minDate = ref('')
-const selectedDate = ref('')
+// ── Step 1: Date & Time state ──────────────────────────────
+const roundType = ref<RoundType>('Eighteen')
+const selectedDate = ref<string | null>(null)
+const selectedSlotId = ref<string | null>(null)
 
-onMounted(() => {
-  const todayStr = new Date().toISOString().split('T')[0]
-  today.value = todayStr
-  minDate.value = todayStr
-  selectedDate.value = todayStr
+const today = computed(() => new Date().toISOString().split('T')[0])
+const minDate = computed(() => today.value)
+
+// Settings — bookingWindowDays drives maxDate
+const { data: settings } = api.get<BookingSettingsDto>('/admin/settings')
+const maxDate = computed(() => {
+  const days = settings.value?.bookingWindowDays ?? 14
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
 })
 
-function goToStep2() {
-  selectedSlot.value = null
-  slots.value = []
-  slotsError.value = null
-  step.value = 2
-  loadSlots()
-}
+// Operating hours — derive closed day-of-week numbers
+const { data: operatingHours } = api.get<OperatingHoursDto[]>('/operating-hours')
+const closedDays = computed(() =>
+  (operatingHours.value ?? []).filter(h => !h.isOpen).map(h => h.dayOfWeek)
+)
 
-// ── Step 2: Slot grid ────────────────────────────────────────
-const slots = ref<TeeTimeSlotDto[]>([])
-const slotsLoading = ref(false)
-const slotsError = ref<string | null>(null)
-const selectedSlot = ref<TeeTimeSlotDto | null>(null)
+// Course holidays
+const { data: holidaysRaw } = api.get<CourseHolidayDto[]>('/course-holidays')
+const holidays = computed(() => (holidaysRaw.value ?? []).map(h => h.date))
 
-async function loadSlots() {
-  slotsLoading.value = true
-  slotsError.value = null
-  try {
-    slots.value = await $fetch<TeeTimeSlotDto[]>(
-      api.url(`/tee-time-slots?date=${selectedDate.value}`)
-    )
-  } catch {
-    slotsError.value = 'Unable to load tee times. Please try again or call us at (780) 473-2511.'
-  } finally {
-    slotsLoading.value = false
-  }
-}
+// Tee time slots — refetch when date or roundType changes
+const startingHole = computed(() => (roundType.value === 'BackNine' ? 10 : 1))
+const slotsParams = computed(() => ({
+  date: selectedDate.value,
+  startingHole: startingHole.value,
+}))
 
-// ── Step 3: Golfer details ───────────────────────────────────
+const { data: slotsData, pending: slotsLoading, refresh: refreshSlots } = api.get<TeeTimeSlotDto[]>(
+  '/tee-time-slots',
+  {
+    params: slotsParams,
+    watch: [slotsParams],
+    immediate: false,
+  },
+)
+const slots = computed(() => slotsData.value ?? [])
+
+// When date or roundType changes, clear slot selection and reload
+watch([selectedDate, roundType], () => {
+  selectedSlotId.value = null
+  if (selectedDate.value) refreshSlots()
+})
+
+// Selected slot's start time for the summary component
+const selectedSlotTime = computed(() => {
+  if (!selectedSlotId.value) return null
+  const slot = slots.value.find(s => s.id === selectedSlotId.value)
+  return slot?.startTime ?? null
+})
+
+// ── Step 2: Golfer details ─────────────────────────────────
 const form = reactive({
   golferName: '',
   golferEmail: '',
   golferPhone: '',
   numberOfPlayers: 1,
   numberOfCarts: 0,
+  referralSource: null as string | null,
 })
+
+const formErrors = reactive<Record<string, string>>({})
+
+function validateField(field: string) {
+  delete formErrors[field]
+  if (field === 'golferName') {
+    if (!form.golferName.trim()) formErrors.golferName = 'Name is required.'
+    else if (form.golferName.length > 100) formErrors.golferName = 'Max 100 characters.'
+  }
+  if (field === 'golferEmail') {
+    if (!form.golferEmail.trim()) formErrors.golferEmail = 'Email is required.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.golferEmail)) formErrors.golferEmail = 'Enter a valid email.'
+  }
+  if (field === 'golferPhone') {
+    const digits = form.golferPhone.replace(/\D/g, '')
+    if (!form.golferPhone.trim()) formErrors.golferPhone = 'Phone is required.'
+    else if (digits.length < 10) formErrors.golferPhone = 'At least 10 digits required.'
+  }
+}
+
+function validateAll(): boolean {
+  validateField('golferName')
+  validateField('golferEmail')
+  validateField('golferPhone')
+  return Object.keys(formErrors).length === 0
+}
 
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
 
-async function submitBooking() {
-  if (!selectedSlot.value) return
-  submitting.value = true
-  submitError.value = null
-  try {
-    booking.value = await $fetch<BookingDto>(api.url('/bookings'), {
-      method: 'POST',
-      body: {
-        teeTimeSlotId: selectedSlot.value.id,
-        golferName: form.golferName,
-        golferEmail: form.golferEmail,
-        golferPhone: form.golferPhone,
-        numberOfPlayers: form.numberOfPlayers,
-        numberOfCarts: form.numberOfCarts,
-      },
-    })
-    step.value = 4
-  } catch (e: any) {
-    submitError.value =
-      e?.data ?? e?.message ?? 'Unable to complete your booking. Please call us at (780) 473-2511.'
-  } finally {
-    submitting.value = false
-  }
-}
-
-// ── Step 4: Confirmation ─────────────────────────────────────
+// ── Step 3: Confirmation ───────────────────────────────────
 const booking = ref<BookingDto | null>(null)
 
 const formattedBookingDate = computed(() => {
@@ -119,204 +146,373 @@ const googleCalendarUrl = computed(() => {
     `&location=${encodeURIComponent('Miquelon Hills Golf Course, Camrose County, Alberta')}`
   )
 })
+
+const roundTypeLabel = computed(() => {
+  const labels: Record<RoundType, string> = {
+    Eighteen: '18 Holes',
+    FrontNine: '9 Holes (Front)',
+    BackNine: 'Back 9',
+  }
+  return labels[roundType.value]
+})
+
+// ── Booking submission ─────────────────────────────────────
+async function submitBooking() {
+  if (!validateAll()) return
+  if (!selectedSlotId.value) return
+
+  submitting.value = true
+  submitError.value = null
+
+  try {
+    const payload: CreateBookingPayload = {
+      teeTimeSlotId: selectedSlotId.value,
+      golferName: form.golferName.trim(),
+      golferEmail: form.golferEmail.trim(),
+      golferPhone: form.golferPhone.trim(),
+      numberOfPlayers: form.numberOfPlayers,
+      numberOfCarts: form.numberOfCarts,
+      roundType: roundType.value,
+      referralSource: form.referralSource,
+    }
+    booking.value = await api.post<BookingDto>('/bookings', payload)
+    step.value = 3
+    clearSessionStorage()
+  } catch (e: any) {
+    if (e?.status === 409 || e?.statusCode === 409) {
+      submitError.value = 'This tee time was just booked by someone else. Please go back and choose another slot.'
+    } else {
+      submitError.value =
+        e?.data ?? e?.message ?? 'Unable to complete your booking. Please call us at (780) 473-2511.'
+    }
+  } finally {
+    submitting.value = false
+  }
+}
+
+// ── Reset wizard ───────────────────────────────────────────
+function resetWizard() {
+  step.value = 1
+  roundType.value = 'Eighteen'
+  selectedDate.value = null
+  selectedSlotId.value = null
+  form.golferName = ''
+  form.golferEmail = ''
+  form.golferPhone = ''
+  form.numberOfPlayers = 1
+  form.numberOfCarts = 0
+  form.referralSource = null
+  Object.keys(formErrors).forEach(k => delete formErrors[k])
+  submitError.value = null
+  booking.value = null
+  clearSessionStorage()
+}
+
+// ── Session persistence ────────────────────────────────────
+const SESSION_KEYS = {
+  step: 'booking_step',
+  roundType: 'booking_roundType',
+  date: 'booking_date',
+  slotId: 'booking_slotId',
+  form: 'booking_form',
+} as const
+
+function saveToSession() {
+  if (import.meta.server) return
+  try {
+    sessionStorage.setItem(SESSION_KEYS.step, String(step.value))
+    sessionStorage.setItem(SESSION_KEYS.roundType, roundType.value)
+    if (selectedDate.value) sessionStorage.setItem(SESSION_KEYS.date, selectedDate.value)
+    if (selectedSlotId.value) sessionStorage.setItem(SESSION_KEYS.slotId, selectedSlotId.value)
+    sessionStorage.setItem(SESSION_KEYS.form, JSON.stringify(form))
+  } catch { /* sessionStorage may be unavailable */ }
+}
+
+function restoreFromSession() {
+  if (import.meta.server) return
+  try {
+    const savedStep = sessionStorage.getItem(SESSION_KEYS.step)
+    const savedRoundType = sessionStorage.getItem(SESSION_KEYS.roundType)
+    const savedDate = sessionStorage.getItem(SESSION_KEYS.date)
+    const savedSlotId = sessionStorage.getItem(SESSION_KEYS.slotId)
+    const savedForm = sessionStorage.getItem(SESSION_KEYS.form)
+
+    // Only restore steps 1 or 2 (not confirmation)
+    if (savedStep && ['1', '2'].includes(savedStep)) {
+      step.value = Number(savedStep) as 1 | 2
+    }
+    if (savedRoundType && ['Eighteen', 'FrontNine', 'BackNine'].includes(savedRoundType)) {
+      roundType.value = savedRoundType as RoundType
+    }
+    if (savedDate) selectedDate.value = savedDate
+    if (savedSlotId) selectedSlotId.value = savedSlotId
+    if (savedForm) {
+      const parsed = JSON.parse(savedForm)
+      Object.assign(form, parsed)
+    }
+  } catch { /* ignore parse errors */ }
+}
+
+function clearSessionStorage() {
+  if (import.meta.server) return
+  try {
+    Object.values(SESSION_KEYS).forEach(k => sessionStorage.removeItem(k))
+  } catch { /* ignore */ }
+}
+
+// Persist on step change
+watch(step, saveToSession)
+
+// Restore on mount
+onMounted(() => {
+  restoreFromSession()
+  // If we restored a date, trigger slot load
+  if (selectedDate.value) refreshSlots()
+})
+
+// Referral source options
+const referralOptions = [
+  'Google',
+  'Facebook',
+  'Word of mouth',
+  'Returning golfer',
+  'Drive-by',
+  'Other',
+]
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-12">
+  <div class="max-w-5xl mx-auto px-4 py-12">
     <h1 class="font-display text-4xl font-bold text-accent mb-2">Book a Tee Time</h1>
     <p class="text-text/70 mb-8">Online booking for Miquelon Hills Golf Course.</p>
 
     <!-- Step indicator -->
-    <div class="flex items-center gap-2 mb-10 text-sm font-medium">
-      <template v-for="(label, i) in ['Date', 'Time', 'Details', 'Confirmed']" :key="i">
-        <div
-          :class="[
-            'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
-            step > i + 1 ? 'bg-primary text-white' : step === i + 1 ? 'bg-accent text-white' : 'bg-gray-200 text-gray-500'
-          ]"
-        >
-          <template v-if="step > i + 1">✓</template>
-          <template v-else>{{ i + 1 }}</template>
-        </div>
-        <span :class="step === i + 1 ? 'text-accent font-semibold' : 'text-text/40'">{{ label }}</span>
-        <div v-if="i < 3" class="flex-1 h-px bg-gray-200" />
-      </template>
+    <div class="mb-10">
+      <BookingStepIndicator :current-step="step" :steps="['Date & Time', 'Your Details', 'Confirmation']" />
     </div>
 
-    <!-- ── Step 1: Date picker ── -->
+    <!-- ═══ Step 1: Date & Time ═══ -->
     <div v-if="step === 1">
-      <h2 class="font-display text-2xl font-bold text-accent mb-4">Pick a Date</h2>
-      <div class="bg-surface rounded-lg shadow-sm p-6 flex flex-col gap-4">
-        <div>
-          <label for="booking-date" class="block text-sm font-medium text-text mb-2">Select your preferred date</label>
-          <input
-            id="booking-date"
-            v-model="selectedDate"
-            type="date"
-            :min="minDate"
-            class="border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto"
-          >
+      <div class="mb-6">
+        <BookingRoundSelector v-model="roundType" />
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Left: Calendar + Summary -->
+        <div class="flex flex-col gap-4">
+          <BookingCalendar
+            :model-value="selectedDate"
+            :min-date="minDate"
+            :max-date="maxDate"
+            :closed-days="closedDays"
+            :holidays="holidays"
+            @update:model-value="selectedDate = $event"
+          />
+          <BookingSummary
+            :date="selectedDate"
+            :time="selectedSlotTime"
+            :round-type="roundType"
+          />
         </div>
+
+        <!-- Right: Slot list -->
         <div>
-          <button
-            class="px-6 py-2.5 bg-primary text-white font-semibold text-sm rounded hover:opacity-90 transition-opacity"
-            @click="goToStep2"
-          >
-            See Available Times →
-          </button>
+          <template v-if="selectedDate">
+            <BookingSlotList
+              :slots="slots"
+              :loading="slotsLoading"
+              v-model:selected-id="selectedSlotId"
+            />
+          </template>
+          <div v-else class="bg-white rounded-lg p-8 text-center text-text/50 text-sm shadow-sm">
+            <p class="font-medium">Select a date to see available tee times.</p>
+          </div>
         </div>
+      </div>
+
+      <!-- Continue button -->
+      <div class="mt-8 flex justify-end">
+        <button
+          :disabled="!selectedSlotId"
+          class="bg-accent hover:bg-accent/90 text-white font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          @click="step = 2"
+        >
+          Continue to Details &rarr;
+        </button>
       </div>
     </div>
 
-    <!-- ── Step 2: Slot grid ── -->
+    <!-- ═══ Step 2: Your Details ═══ -->
     <div v-else-if="step === 2">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-display text-2xl font-bold text-accent">
-          Available Times
-          <span class="text-base font-normal text-text/60 ml-2">{{ selectedDate }}</span>
-        </h2>
-        <button class="text-sm text-primary hover:underline" @click="step = 1">← Change date</button>
-      </div>
-
-      <div v-if="slotsLoading" class="py-12 text-center text-text/40">Loading tee times…</div>
-
-      <div v-else-if="slotsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700 text-sm mb-4">
-        {{ slotsError }}
-      </div>
-
-      <template v-else-if="slots.length > 0">
-        <SlotGrid
-          :slots="slots"
-          :selected-slot-id="selectedSlot?.id ?? null"
-          @select="slot => { selectedSlot = slot }"
-        />
-
-        <div v-if="selectedSlot" class="mt-6 flex items-center justify-between bg-primary/5 border border-primary/20 rounded p-4">
-          <div>
-            <p class="text-sm font-semibold text-text">Selected: {{ selectedSlot.startTime }} on {{ selectedDate }}</p>
-            <p class="text-xs text-text/60 mt-0.5">{{ selectedSlot.maxPlayers - selectedSlot.bookingCount }} spot(s) remaining</p>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Form -->
+        <div class="lg:col-span-2">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="font-display text-2xl font-bold text-accent">Your Details</h2>
+            <button class="text-sm text-primary hover:underline" @click="step = 1">&larr; Back to Date &amp; Time</button>
           </div>
-          <button
-            class="px-5 py-2 bg-primary text-white font-semibold text-sm rounded hover:opacity-90 transition-opacity"
-            @click="step = 3"
-          >
-            Continue →
-          </button>
-        </div>
-      </template>
 
-      <div v-else class="bg-background rounded-lg p-8 text-center text-text/50 text-sm">
-        <p class="font-medium mb-1">No tee times available for this date.</p>
-        <p>Try a different date, or call us at <a href="tel:+17804732511" class="text-primary hover:underline">(780) 473-2511</a>.</p>
-        <button class="mt-4 text-primary text-sm hover:underline" @click="step = 1">← Pick another date</button>
+          <form class="bg-white rounded-lg shadow-sm p-6 flex flex-col gap-5" @submit.prevent="submitBooking">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Full Name -->
+              <div class="sm:col-span-2">
+                <label for="golfer-name" class="block text-sm font-medium text-text mb-1">
+                  Full Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  id="golfer-name"
+                  v-model="form.golferName"
+                  type="text"
+                  required
+                  maxlength="100"
+                  class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  :class="formErrors.golferName ? 'border-red-500' : 'border-primary/20'"
+                  placeholder="Your full name"
+                  @blur="validateField('golferName')"
+                />
+                <p v-if="formErrors.golferName" class="text-red-500 text-xs mt-1">{{ formErrors.golferName }}</p>
+              </div>
+
+              <!-- Email -->
+              <div>
+                <label for="golfer-email" class="block text-sm font-medium text-text mb-1">
+                  Email <span class="text-red-500">*</span>
+                </label>
+                <input
+                  id="golfer-email"
+                  v-model="form.golferEmail"
+                  type="email"
+                  required
+                  class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  :class="formErrors.golferEmail ? 'border-red-500' : 'border-primary/20'"
+                  placeholder="your@email.com"
+                  @blur="validateField('golferEmail')"
+                />
+                <p v-if="formErrors.golferEmail" class="text-red-500 text-xs mt-1">{{ formErrors.golferEmail }}</p>
+              </div>
+
+              <!-- Phone -->
+              <div>
+                <label for="golfer-phone" class="block text-sm font-medium text-text mb-1">
+                  Phone <span class="text-red-500">*</span>
+                </label>
+                <input
+                  id="golfer-phone"
+                  v-model="form.golferPhone"
+                  type="tel"
+                  required
+                  class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  :class="formErrors.golferPhone ? 'border-red-500' : 'border-primary/20'"
+                  placeholder="(780) 555-0100"
+                  @blur="validateField('golferPhone')"
+                />
+                <p v-if="formErrors.golferPhone" class="text-red-500 text-xs mt-1">{{ formErrors.golferPhone }}</p>
+              </div>
+
+              <!-- Number of Players -->
+              <div>
+                <label for="num-players" class="block text-sm font-medium text-text mb-1">
+                  Number of Players <span class="text-red-500">*</span>
+                </label>
+                <select
+                  id="num-players"
+                  v-model="form.numberOfPlayers"
+                  class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+                >
+                  <option v-for="n in 4" :key="n" :value="n">{{ n }}</option>
+                </select>
+              </div>
+
+              <!-- Number of Carts -->
+              <div>
+                <label for="num-carts" class="block text-sm font-medium text-text mb-1">
+                  Number of Carts
+                </label>
+                <select
+                  id="num-carts"
+                  v-model="form.numberOfCarts"
+                  class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+                >
+                  <option :value="0">No cart</option>
+                  <option v-for="n in form.numberOfPlayers" :key="n" :value="n">{{ n }} cart{{ n > 1 ? 's' : '' }}</option>
+                </select>
+              </div>
+
+              <!-- Referral Source -->
+              <div class="sm:col-span-2">
+                <label for="referral-source" class="block text-sm font-medium text-text mb-1">
+                  How did you hear about us?
+                </label>
+                <select
+                  id="referral-source"
+                  v-model="form.referralSource"
+                  class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+                >
+                  <option :value="null">-- Select (optional) --</option>
+                  <option v-for="opt in referralOptions" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Submit error -->
+            <div v-if="submitError" class="bg-red-50 border border-red-200 rounded p-3 text-red-700 text-sm">
+              {{ submitError }}
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3 pt-2">
+              <button
+                type="submit"
+                :disabled="submitting"
+                class="bg-accent hover:bg-accent/90 text-white font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <template v-if="submitting">Booking...</template>
+                <template v-else>Confirm Booking</template>
+              </button>
+              <button
+                type="button"
+                class="px-4 py-3 text-sm text-text/60 hover:text-text rounded-lg"
+                @click="step = 1"
+              >
+                Back
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Sidebar: Summary -->
+        <div class="lg:col-span-1">
+          <BookingSummary
+            :date="selectedDate"
+            :time="selectedSlotTime"
+            :round-type="roundType"
+          />
+        </div>
       </div>
     </div>
 
-    <!-- ── Step 3: Golfer details ── -->
-    <div v-else-if="step === 3">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-display text-2xl font-bold text-accent">Your Details</h2>
-        <button class="text-sm text-primary hover:underline" @click="step = 2">← Change time</button>
-      </div>
-
-      <!-- Booking summary -->
-      <div class="bg-primary/5 border border-primary/20 rounded p-4 mb-6 text-sm">
-        <p class="font-semibold text-text">{{ selectedDate }} at {{ selectedSlot?.startTime }}</p>
-        <p class="text-text/60 text-xs mt-0.5">Miquelon Hills Golf Course</p>
-      </div>
-
-      <form class="bg-surface rounded-lg shadow-sm p-6 flex flex-col gap-4" @submit.prevent="submitBooking">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="sm:col-span-2">
-            <label for="golfer-name" class="block text-sm font-medium text-text mb-1">Full Name <span class="text-red-500">*</span></label>
-            <input
-              id="golfer-name"
-              v-model="form.golferName"
-              type="text"
-              required
-              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              placeholder="Your full name"
-            >
-          </div>
-
-          <div>
-            <label for="golfer-email" class="block text-sm font-medium text-text mb-1">Email <span class="text-red-500">*</span></label>
-            <input
-              id="golfer-email"
-              v-model="form.golferEmail"
-              type="email"
-              required
-              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              placeholder="your@email.com"
-            >
-          </div>
-
-          <div>
-            <label for="golfer-phone" class="block text-sm font-medium text-text mb-1">Phone <span class="text-red-500">*</span></label>
-            <input
-              id="golfer-phone"
-              v-model="form.golferPhone"
-              type="tel"
-              required
-              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              placeholder="(780) 555-0100"
-            >
-          </div>
-
-          <div>
-            <label for="num-players" class="block text-sm font-medium text-text mb-1">Number of Players <span class="text-red-500">*</span></label>
-            <select
-              id="num-players"
-              v-model="form.numberOfPlayers"
-              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-            >
-              <option v-for="n in Math.min(4, selectedSlot ? selectedSlot.maxPlayers - selectedSlot.bookingCount : 4)" :key="n" :value="n">{{ n }}</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="num-carts" class="block text-sm font-medium text-text mb-1">Cart Rental</label>
-            <select
-              id="num-carts"
-              v-model="form.numberOfCarts"
-              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-            >
-              <option :value="0">No cart</option>
-              <option v-for="n in form.numberOfPlayers" :key="n" :value="n">{{ n }} cart{{ n > 1 ? 's' : '' }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="submitError" class="bg-red-50 border border-red-200 rounded p-3 text-red-700 text-sm">
-          {{ submitError }}
-        </div>
-
-        <div class="flex gap-3 pt-2">
-          <button
-            type="submit"
-            :disabled="submitting"
-            class="px-6 py-2.5 bg-primary text-white font-semibold text-sm rounded hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            <template v-if="submitting">Booking…</template>
-            <template v-else>Confirm Booking</template>
-          </button>
-          <button type="button" class="px-4 py-2.5 text-sm text-text/60 hover:text-text" @click="step = 2">Cancel</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- ── Step 4: Confirmation ── -->
-    <div v-else-if="step === 4 && booking">
-      <div class="bg-surface rounded-lg shadow-sm p-8 text-center">
-        <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    <!-- ═══ Step 3: Confirmation ═══ -->
+    <div v-else-if="step === 3 && booking">
+      <div class="bg-white rounded-lg shadow-sm p-8 text-center max-w-2xl mx-auto">
+        <!-- Green checkmark -->
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 class="font-display text-3xl font-bold text-accent mb-2">You're Booked!</h2>
-        <p class="text-text/70 text-sm mb-8">A confirmation has been sent to {{ booking.golferEmail }}</p>
 
-        <div class="bg-background rounded-lg p-6 text-left mb-6 text-sm space-y-2">
+        <h2 class="font-display text-3xl font-bold text-accent mb-2">You're Booked!</h2>
+
+        <!-- Confirmation code -->
+        <p class="text-3xl font-bold text-primary tracking-wide mb-2">{{ booking.confirmationCode }}</p>
+        <p class="text-text/50 text-xs mb-6">Confirmation Code</p>
+
+        <p class="text-text/70 text-sm mb-8">
+          A confirmation has been sent to <span class="font-semibold">{{ booking.golferEmail }}</span>.
+        </p>
+
+        <!-- Booking details summary -->
+        <div class="bg-gray-50 rounded-lg p-6 text-left mb-6 text-sm space-y-2">
           <div class="flex justify-between">
             <span class="text-text/60">Date</span>
             <span class="font-medium text-text">{{ formattedBookingDate }}</span>
@@ -324,6 +520,10 @@ const googleCalendarUrl = computed(() => {
           <div class="flex justify-between">
             <span class="text-text/60">Tee Time</span>
             <span class="font-medium text-text">{{ booking.slotTime }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-text/60">Round</span>
+            <span class="font-medium text-text">{{ roundTypeLabel }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-text/60">Name</span>
@@ -337,27 +537,30 @@ const googleCalendarUrl = computed(() => {
             <span class="text-text/60">Carts</span>
             <span class="font-medium text-text">{{ booking.numberOfCarts }}</span>
           </div>
-          <div class="flex justify-between pt-2 border-t border-primary/10">
-            <span class="text-text/60">Booking #</span>
-            <span class="font-medium text-text/50 text-xs">{{ booking.id }}</span>
-          </div>
         </div>
 
+        <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
           <a
             :href="googleCalendarUrl"
             target="_blank"
             rel="noopener"
-            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-primary/30 text-primary font-semibold text-sm rounded hover:bg-primary/5 transition-colors"
+            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-primary/30 text-primary font-semibold text-sm rounded-lg hover:bg-primary/5 transition-colors"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             Add to Google Calendar
           </a>
+          <button
+            class="bg-accent hover:bg-accent/90 text-white font-bold py-2.5 px-5 rounded-lg transition-colors text-sm"
+            @click="resetWizard"
+          >
+            Book Another Tee Time
+          </button>
           <NuxtLink
             to="/"
-            class="inline-flex items-center justify-center px-5 py-2.5 bg-primary text-white font-semibold text-sm rounded hover:opacity-90 transition-opacity"
+            class="inline-flex items-center justify-center px-5 py-2.5 text-text/60 hover:text-text font-semibold text-sm rounded-lg transition-colors"
           >
             Back to Home
           </NuxtLink>
