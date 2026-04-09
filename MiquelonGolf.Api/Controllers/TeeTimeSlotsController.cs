@@ -38,7 +38,8 @@ public class TeeTimeSlotsController : ControllerBase
                 s.MaxPlayers,
                 s.IsBlocked,
                 s.BlockReason,
-                s.Bookings.Count(b => b.Status == Models.BookingStatus.Confirmed)))
+                s.Bookings.Count(b => b.Status == Models.BookingStatus.Confirmed),
+                s.StartingHole))
             .ToListAsync();
 
         return Ok(slots);
@@ -75,7 +76,7 @@ public class TeeTimeSlotsController : ControllerBase
 
         var response = slots.Select(s => new TeeTimeSlotResponse(
             s.Id, s.Date.ToString("yyyy-MM-dd"), s.StartTime.ToString("HH:mm"),
-            s.MaxPlayers, s.IsBlocked, s.BlockReason, 0));
+            s.MaxPlayers, s.IsBlocked, s.BlockReason, 0, s.StartingHole));
         return Ok(response);
     }
 

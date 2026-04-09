@@ -1,15 +1,11 @@
 using System.ComponentModel.DataAnnotations;
-using MiquelonGolf.Api.Models;
 
 namespace MiquelonGolf.Api.DTOs.Bookings;
 
-public record CreateBookingRequest(
-    [Required] Guid TeeTimeSlotId,
+public record UpdateBookingRequest(
     [Required, MinLength(1), MaxLength(100)] string GolferName,
     [Required, EmailAddress] string GolferEmail,
     [Required, MinLength(10)] string GolferPhone,
     [Range(1, 4)] int NumberOfPlayers,
-    [Range(0, 4)] int NumberOfCarts,
-    [Required] RoundType RoundType,
-    string? ReferralSource
+    [Range(0, 4)] int NumberOfCarts
 );

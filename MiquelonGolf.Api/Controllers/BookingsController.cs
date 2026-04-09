@@ -43,15 +43,20 @@ public class BookingsController : ControllerBase
             GolferPhone = request.GolferPhone,
             NumberOfPlayers = request.NumberOfPlayers,
             NumberOfCarts = request.NumberOfCarts,
-            Status = BookingStatus.Confirmed
+            Status = BookingStatus.Confirmed,
+            RoundType = request.RoundType,
+            ReferralSource = request.ReferralSource,
+            ConfirmationCode = GenerateConfirmationCode()
         };
 
         _db.Bookings.Add(booking);
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        var confirmation = new BookingConfirmation(booking.Id, slot.Date.ToString("yyyy-MM-dd"),
-            slot.StartTime.ToString("HH:mm"), booking.NumberOfPlayers, booking.NumberOfCarts, booking.Status.ToString());
+        var confirmation = new BookingConfirmation(booking.Id, booking.ConfirmationCode,
+            slot.Date.ToString("yyyy-MM-dd"), slot.StartTime.ToString("HH:mm"),
+            slot.StartingHole, booking.NumberOfPlayers, booking.NumberOfCarts,
+            booking.Status.ToString(), booking.RoundType.ToString());
         return CreatedAtAction(nameof(GetById), new { id = booking.Id }, confirmation);
     }
 
@@ -97,7 +102,15 @@ public class BookingsController : ControllerBase
         new(b.Id, b.TeeTimeSlotId,
             slot.Date.ToString("yyyy-MM-dd"),
             slot.StartTime.ToString("HH:mm"),
+            slot.StartingHole,
             b.GolferName, b.GolferEmail, b.GolferPhone,
             b.NumberOfPlayers, b.NumberOfCarts,
-            b.Status.ToString(), b.BookedAt);
+            b.Status.ToString(), b.RoundType.ToString(),
+            b.ReferralSource, b.ConfirmationCode, b.BookedAt);
+
+    private static string GenerateConfirmationCode()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        return new string(Random.Shared.GetItems(chars.AsSpan(), 8));
+    }
 }

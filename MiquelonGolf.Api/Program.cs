@@ -150,6 +150,30 @@ using (var scope = app.Services.CreateScope())
         db.Holes.AddRange(holes);
         await db.SaveChangesAsync();
     }
+
+    // Seed booking settings defaults
+    var adminUser = await userManager.FindByEmailAsync(adminEmail);
+    var settingsDefaults = new Dictionary<string, string>
+    {
+        ["settings.bookingWindowDays"] = "14",
+        ["settings.turnTimeOffsetMinutes"] = "135",
+        ["settings.teeTimeIntervalMinutes"] = "10",
+        ["settings.maxPlayersPerSlot"] = "4",
+    };
+    foreach (var (key, defaultValue) in settingsDefaults)
+    {
+        if (!await db.SiteContents.AnyAsync(sc => sc.Key == key))
+        {
+            db.SiteContents.Add(new SiteContent
+            {
+                Key = key,
+                Value = defaultValue,
+                LastUpdatedAt = DateTime.UtcNow,
+                UpdatedByUserId = adminUser?.Id ?? ""
+            });
+        }
+    }
+    await db.SaveChangesAsync();
 }
 
 app.Run();
