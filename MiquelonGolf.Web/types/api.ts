@@ -38,28 +38,85 @@ export interface SiteContentDto {
   lastUpdatedAt: string
 }
 
+export type RoundType = 'Eighteen' | 'FrontNine' | 'BackNine'
+
 export interface TeeTimeSlotDto {
   id: string
-  date: string        // "YYYY-MM-DD"
-  startTime: string   // "HH:mm"
+  date: string
+  startTime: string
   maxPlayers: number
   isBlocked: boolean
   blockReason: string | null
   bookingCount: number
+  startingHole: number
 }
 
 export interface BookingDto {
   id: string
   teeTimeSlotId: string
-  slotDate: string    // "YYYY-MM-DD"
-  slotTime: string    // "HH:mm"
+  slotDate: string
+  slotTime: string
+  startingHole: number
   golferName: string
   golferEmail: string
   golferPhone: string
   numberOfPlayers: number
   numberOfCarts: number
-  status: string      // "Confirmed" | "Cancelled"
-  bookedAt: string    // ISO datetime string
+  status: string
+  roundType: string
+  referralSource: string | null
+  confirmationCode: string
+  bookedAt: string
+}
+
+export interface BookingConfirmationDto {
+  id: string
+  confirmationCode: string
+  slotDate: string
+  slotTime: string
+  startingHole: number
+  numberOfPlayers: number
+  numberOfCarts: number
+  status: string
+  roundType: string
+}
+
+export interface BookingSearchResultDto {
+  id: string
+  slotDate: string
+  slotTime: string
+  startingHole: number
+  golferName: string
+  golferEmail: string
+  status: string
+  roundType: string
+  confirmationCode: string
+}
+
+export interface FlowThroughEntryDto {
+  bookingId: string
+  golferName: string
+  estimatedArrival: string
+  originSlotTime: string
+  numberOfPlayers: number
+}
+
+export interface BookingSettingsDto {
+  bookingWindowDays: number
+  turnTimeOffsetMinutes: number
+  teeTimeIntervalMinutes: number
+  maxPlayersPerSlot: number
+}
+
+export interface CreateBookingPayload {
+  teeTimeSlotId: string
+  golferName: string
+  golferEmail: string
+  golferPhone: string
+  numberOfPlayers: number
+  numberOfCarts: number
+  roundType: RoundType
+  referralSource: string | null
 }
 
 export interface OperatingHoursDto {
