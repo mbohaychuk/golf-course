@@ -27,21 +27,21 @@ describe('AnnouncementBanner', () => {
     expect(wrapper.find('[data-testid="banner"]').exists()).toBe(false)
   })
 
-  it('applies green class for CourseConditions type', async () => {
+  it('applies primary color class for CourseConditions type', async () => {
     const wrapper = await mountSuspended(AnnouncementBanner, {
       props: { announcements: [base] },
     })
     const banner = wrapper.find('[data-testid="banner"]')
-    expect(banner.classes()).toContain('bg-green-100')
+    expect(banner.classes()).toContain('bg-primary/10')
   })
 
-  it('applies red class for Closure type', async () => {
+  it('applies red color class for Closure type', async () => {
     const closure: AnnouncementDto = { ...base, type: 'Closure', message: 'Course closed today.' }
     const wrapper = await mountSuspended(AnnouncementBanner, {
       props: { announcements: [closure] },
     })
     const banner = wrapper.find('[data-testid="banner"]')
-    expect(banner.classes()).toContain('bg-red-100')
+    expect(banner.classes()).toContain('bg-red-50')
   })
 
   it('renders multiple announcements', async () => {

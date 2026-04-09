@@ -28,7 +28,7 @@ public class AuthControllerTests : IClassFixture<TestWebAppFactory>
             lastName = "Smith"
         });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
         Assert.NotNull(body?.Token);
         Assert.Equal("Public", body?.Role);

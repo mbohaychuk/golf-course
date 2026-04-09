@@ -38,7 +38,7 @@ public class TeeTimeSlotsControllerTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var slots = await response.Content
             .ReadFromJsonAsync<List<TeeTimeSlotDto>>();
-        Assert.Equal(12, slots!.Count); // 08:00–10:00 @ 10min = 12 slots
+        Assert.Equal(24, slots!.Count); // 08:00–10:00 @ 10min = 12 slots × 2 starting holes
 
         _client.DefaultRequestHeaders.Authorization = null;
     }
@@ -86,5 +86,6 @@ public class TeeTimeSlotsControllerTests : IClassFixture<TestWebAppFactory>
     private record TeeTimeSlotDto(
         Guid Id, string Date, string StartTime,
         int MaxPlayers, bool IsBlocked,
-        string? BlockReason, int BookingCount);
+        string? BlockReason, int BookingCount,
+        int StartingHole);
 }

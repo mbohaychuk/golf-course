@@ -19,6 +19,15 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     {
         _connection.Open();
 
+        // These settings must be applied via UseSetting so they are available
+        // when Program.cs reads builder.Configuration during startup — the
+        // ConfigureAppConfiguration callback runs too late for that.
+        builder.UseSetting("Jwt:Key", "CHANGE-THIS-TO-A-LONG-RANDOM-SECRET-KEY-IN-PRODUCTION");
+        builder.UseSetting("Jwt:Issuer", "MiquelonGolfApi");
+        builder.UseSetting("Jwt:Audience", "MiquelonGolfClient");
+        builder.UseSetting("Jwt:ExpiryMinutes", "1440");
+        builder.UseSetting("Seed:AdminPassword", "Admin1234!");
+
         builder.ConfigureServices(services =>
         {
             // Remove all DbContext-related registrations to avoid dual-provider conflict
@@ -86,17 +95,6 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         });
 
         builder.UseEnvironment("Testing");
-
-        builder.ConfigureAppConfiguration(config =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Jwt:Key"] = "CHANGE-THIS-TO-A-LONG-RANDOM-SECRET-KEY-IN-PRODUCTION",
-                ["Jwt:Issuer"] = "MiquelonGolfApi",
-                ["Jwt:Audience"] = "MiquelonGolfClient",
-                ["Jwt:ExpiryMinutes"] = "1440"
-            });
-        });
     }
 
     public void ResetDatabase()
