@@ -5,7 +5,7 @@ namespace MiquelonGolf.Api.Services;
 
 public class TeeTimeService : ITeeTimeService
 {
-    public IEnumerable<TeeTimeSlot> GenerateSlots(
+    public IReadOnlyList<TeeTimeSlot> GenerateSlots(
         DateOnly date, int intervalMinutes,
         TimeOnly openTime, TimeOnly closeTime, int maxPlayers)
     {

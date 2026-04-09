@@ -45,7 +45,8 @@ public class AnnouncementsController : ControllerBase
         DateTime? expiresAt = null;
         if (request.ExpiresAt != null)
         {
-            if (!DateTime.TryParse(request.ExpiresAt, out var parsed))
+            if (!DateTime.TryParse(request.ExpiresAt, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
                 return BadRequest("Invalid expiresAt datetime.");
             expiresAt = parsed.ToUniversalTime();
         }
@@ -77,7 +78,8 @@ public class AnnouncementsController : ControllerBase
         DateTime? expiresAt = null;
         if (request.ExpiresAt != null)
         {
-            if (!DateTime.TryParse(request.ExpiresAt, out var parsed))
+            if (!DateTime.TryParse(request.ExpiresAt, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
                 return BadRequest("Invalid expiresAt datetime.");
             expiresAt = parsed.ToUniversalTime();
         }

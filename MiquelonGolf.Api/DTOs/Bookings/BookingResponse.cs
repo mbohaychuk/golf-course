@@ -5,3 +5,11 @@ public record BookingResponse(
     string GolferName, string GolferEmail, string GolferPhone,
     int NumberOfPlayers, int NumberOfCarts,
     string Status, DateTime BookedAt);
+
+public record BookingConfirmation(
+    Guid Id,
+    string SlotDate,
+    string SlotTime,
+    int NumberOfPlayers,
+    int NumberOfCarts,
+    string Status);

@@ -2,8 +2,6 @@
 <script setup lang="ts">
 import type { TeeTimeSlotDto, BookingDto } from '~/types/api'
 
-definePageMeta({ ssr: false })
-
 useSeoMeta({
   title: 'Book a Tee Time — Miquelon Hills Golf Course',
   description: 'Book your tee time online at Miquelon Hills Golf Course east of Edmonton.',
@@ -15,9 +13,16 @@ const api = useApi()
 const step = ref<1 | 2 | 3 | 4>(1)
 
 // ── Step 1: Date picker ──────────────────────────────────────
-const today = new Date().toISOString().split('T')[0]
-const minDate = today
-const selectedDate = ref(today)
+const today = ref('')
+const minDate = ref('')
+const selectedDate = ref('')
+
+onMounted(() => {
+  const todayStr = new Date().toISOString().split('T')[0]
+  today.value = todayStr
+  minDate.value = todayStr
+  selectedDate.value = todayStr
+})
 
 function goToStep2() {
   selectedSlot.value = null
@@ -95,15 +100,22 @@ const formattedBookingDate = computed(() => {
 
 const googleCalendarUrl = computed(() => {
   if (!booking.value) return ''
-  const date = booking.value.slotDate.replace(/-/g, '')
+  const date = booking.value.slotDate
   const [h, m] = booking.value.slotTime.split(':').map(Number)
-  const startStr = `${date}T${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}00`
-  const endH = String(h + 4).padStart(2, '0')
-  const endStr = `${date}T${endH}${String(m).padStart(2,'0')}00`
+  const start = new Date(`${date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`)
+  const end = new Date(start.getTime() + 4 * 60 * 60 * 1000)
+  const fmt = (d: Date) =>
+    d.getFullYear().toString() +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    String(d.getDate()).padStart(2, '0') +
+    'T' +
+    String(d.getHours()).padStart(2, '0') +
+    String(d.getMinutes()).padStart(2, '0') +
+    '00'
   return (
     'https://calendar.google.com/calendar/render?action=TEMPLATE' +
     `&text=${encodeURIComponent('Golf at Miquelon Hills')}` +
-    `&dates=${startStr}/${endStr}` +
+    `&dates=${fmt(start)}/${fmt(end)}` +
     `&location=${encodeURIComponent('Miquelon Hills Golf Course, Camrose County, Alberta')}`
   )
 })
@@ -142,7 +154,7 @@ const googleCalendarUrl = computed(() => {
             v-model="selectedDate"
             type="date"
             :min="minDate"
-            class="border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto"
+            class="border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto"
           >
         </div>
         <div>
@@ -222,7 +234,7 @@ const googleCalendarUrl = computed(() => {
               v-model="form.golferName"
               type="text"
               required
-              class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               placeholder="Your full name"
             >
           </div>
@@ -234,7 +246,7 @@ const googleCalendarUrl = computed(() => {
               v-model="form.golferEmail"
               type="email"
               required
-              class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               placeholder="your@email.com"
             >
           </div>
@@ -246,7 +258,7 @@ const googleCalendarUrl = computed(() => {
               v-model="form.golferPhone"
               type="tel"
               required
-              class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               placeholder="(780) 555-0100"
             >
           </div>
@@ -256,7 +268,7 @@ const googleCalendarUrl = computed(() => {
             <select
               id="num-players"
               v-model="form.numberOfPlayers"
-              class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
             >
               <option v-for="n in Math.min(4, selectedSlot ? selectedSlot.maxPlayers - selectedSlot.bookingCount : 4)" :key="n" :value="n">{{ n }}</option>
             </select>
@@ -267,7 +279,7 @@ const googleCalendarUrl = computed(() => {
             <select
               id="num-carts"
               v-model="form.numberOfCarts"
-              class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+              class="w-full border border-primary/20 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
             >
               <option :value="0">No cart</option>
               <option v-for="n in form.numberOfPlayers" :key="n" :value="n">{{ n }} cart{{ n > 1 ? 's' : '' }}</option>
@@ -325,7 +337,7 @@ const googleCalendarUrl = computed(() => {
             <span class="text-text/60">Carts</span>
             <span class="font-medium text-text">{{ booking.numberOfCarts }}</span>
           </div>
-          <div class="flex justify-between pt-2 border-t border-gray-100">
+          <div class="flex justify-between pt-2 border-t border-primary/10">
             <span class="text-text/60">Booking #</span>
             <span class="font-medium text-text/50 text-xs">{{ booking.id }}</span>
           </div>

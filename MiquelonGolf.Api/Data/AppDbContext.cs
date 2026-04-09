@@ -16,6 +16,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Hole> Holes => Set<Hole>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<SiteContent> SiteContents => Set<SiteContent>();
+    public DbSet<OperatingHours> OperatingHours => Set<OperatingHours>();
+    public DbSet<CourseHoliday> CourseHolidays => Set<CourseHoliday>();
+    public DbSet<SpecialHours> SpecialHours => Set<SpecialHours>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -26,6 +29,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<Hole>()
             .HasIndex(h => h.HoleNumber)
+            .IsUnique();
+
+        builder.Entity<OperatingHours>()
+            .HasKey(o => o.DayOfWeek);
+
+        builder.Entity<CourseHoliday>()
+            .HasIndex(h => h.Date)
+            .IsUnique();
+
+        builder.Entity<SpecialHours>()
+            .HasIndex(s => s.Date)
             .IsUnique();
 
         builder.Entity<Member>()

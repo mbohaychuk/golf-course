@@ -6,14 +6,14 @@ const props = defineProps<{
 }>()
 
 const colorClass = (type: AnnouncementDto['type']) => ({
-  CourseConditions: 'bg-green-100 border-green-400 text-green-800',
-  Closure:          'bg-red-100 border-red-400 text-red-800',
-  General:          'bg-amber-50 border-amber-400 text-amber-800',
+  CourseConditions: 'bg-primary/10 border-primary/40 text-primary',
+  Closure:          'bg-red-50 border-red-300 text-red-700',
+  General:          'bg-accent/10 border-accent/40 text-text',
 })[type]
 </script>
 
 <template>
-  <div v-if="announcements.length > 0">
+  <div v-if="announcements.length > 0" aria-live="polite">
     <div
       v-for="a in announcements"
       :key="a.id"

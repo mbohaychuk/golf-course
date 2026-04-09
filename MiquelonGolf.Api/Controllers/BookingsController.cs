@@ -50,11 +50,13 @@ public class BookingsController : ControllerBase
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        var response = ToResponse(booking, slot);
-        return CreatedAtAction(nameof(GetById), new { id = booking.Id }, response);
+        var confirmation = new BookingConfirmation(booking.Id, slot.Date.ToString("yyyy-MM-dd"),
+            slot.StartTime.ToString("HH:mm"), booking.NumberOfPlayers, booking.NumberOfCarts, booking.Status.ToString());
+        return CreatedAtAction(nameof(GetById), new { id = booking.Id }, confirmation);
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var booking = await _db.Bookings

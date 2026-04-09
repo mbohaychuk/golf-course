@@ -1,8 +1,10 @@
 /* MiquelonGolf.Web/assets/css/tokens.css */
 :root {
-  --color-primary:    #2D5016;  /* deep forest green */
-  --color-accent:     #8B6914;  /* warm brown */
-  --color-background: #F5F0E8;  /* warm cream */
-  --color-surface:    #FFFFFF;  /* cards, nav */
-  --color-text:       #1C1C1C;  /* body copy */
+  --color-primary:    #1C4209;  /* deep forest green */
+  --color-accent:     #A07828;  /* aged gold / amber */
+  --color-background: #EDE8D4;  /* weathered parchment */
+  --color-surface:    #FAF7EE;  /* soft cream cards/nav */
+  --color-text:       #1A1A12;  /* near-black with green undertone */
+  --color-forest:     #0B1E05;  /* canopy darkness — hero bg */
+  --color-canopy:     #2A5410;  /* mid-canopy green — silhouette accent */
 }

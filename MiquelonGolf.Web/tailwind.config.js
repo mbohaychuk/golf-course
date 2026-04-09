@@ -16,6 +16,8 @@ module.exports = {
         background: 'var(--color-background)',
         surface:    'var(--color-surface)',
         text:       'var(--color-text)',
+        forest:     'var(--color-forest)',
+        canopy:     'var(--color-canopy)',
       },
       fontFamily: {
         display: ['"Playfair Display"', 'serif'],

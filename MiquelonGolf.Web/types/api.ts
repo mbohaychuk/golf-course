@@ -62,6 +62,30 @@ export interface BookingDto {
   bookedAt: string    // ISO datetime string
 }
 
+export interface OperatingHoursDto {
+  dayOfWeek: number
+  dayName: string
+  isOpen: boolean
+  openTime: string    // "HH:mm"
+  closeTime: string   // "HH:mm"
+  intervalMinutes: number
+  maxPlayers: number
+}
+
+export interface CourseHolidayDto {
+  id: string
+  date: string        // "YYYY-MM-DD"
+  reason: string
+}
+
+export interface SpecialHoursDto {
+  id: string
+  date: string        // "YYYY-MM-DD"
+  openTime: string    // "HH:mm"
+  closeTime: string   // "HH:mm"
+  reason: string
+}
+
 export interface MemberDto {
   id: string
   firstName: string

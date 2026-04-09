@@ -6,13 +6,31 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/google-fonts',
+    '@nuxtjs/sitemap',
     '@nuxt/test-utils/module',
   ],
 
+  site: {
+    url: 'https://miquelonhillsgolf.com',
+  },
+
+  sitemap: {
+    exclude: ['/admin/**'],
+  },
+
+  app: {
+    head: {
+      htmlAttrs: { lang: 'en-CA' },
+      meta: [
+        { name: 'theme-color', content: '#1C4209' },
+      ],
+    },
+  },
+
   googleFonts: {
     families: {
-      'Playfair+Display': [400, 700],
-      Inter: [400, 500, 600],
+      'Playfair+Display': [400, 700, 800, 900],
+      Inter: [300, 400, 500, 600],
     },
     display: 'swap',
   },
@@ -21,7 +39,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE ?? 'http://localhost:5000',
+      apiBase: process.env.API_BASE ?? 'http://localhost:5151',
     },
   },
 

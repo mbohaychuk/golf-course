@@ -9,6 +9,7 @@ const navLinks = [
   { to: '/admin/members',   label: 'Members' },
   { to: '/admin/events',    label: 'Events' },
   { to: '/admin/content',   label: 'Content' },
+  { to: '/admin/hours',     label: 'Hours' },
 ]
 </script>
 

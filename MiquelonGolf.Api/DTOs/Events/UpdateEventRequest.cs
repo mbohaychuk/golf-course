@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MiquelonGolf.Api.DTOs.Events;
 public record UpdateEventRequest(
-    [Required] string Title,
+    [Required, MaxLength(200)] string Title,
     [Required] string Description,
     string EventDate,
     string? StartTime,

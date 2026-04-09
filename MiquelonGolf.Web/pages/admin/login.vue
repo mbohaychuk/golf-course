@@ -4,7 +4,7 @@ definePageMeta({ layout: false, ssr: false })
 
 useSeoMeta({ title: 'Admin Login — Miquelon Hills' })
 
-const { login } = useAuth()
+const { login, token, role } = useAuth()
 
 const form = reactive({ email: '', password: '' })
 const error = ref<string | null>(null)
@@ -16,7 +16,10 @@ async function handleLogin() {
   try {
     const result = await login(form.email, form.password)
     if (result.role !== 'Admin') {
+      token.value = null
+      role.value = null
       error.value = 'This account does not have admin access.'
+      loading.value = false
       return
     }
     await navigateTo('/admin')

@@ -11,6 +11,7 @@ using MiquelonGolf.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -21,7 +22,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 8;
-    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireNonAlphanumeric = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
@@ -52,6 +53,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITeeTimeService, TeeTimeService>();
+builder.Services.AddHostedService<SlotGenerationService>();
 
 builder.Services.AddCors(options =>
 {
@@ -70,6 +72,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -108,13 +112,32 @@ using (var scope = app.Services.CreateScope())
             LastName = "User",
             EmailConfirmed = true
         };
-        var result = await userManager.CreateAsync(admin, "Admin1234x");
+        var adminPassword = builder.Configuration["Seed:AdminPassword"];
+        if (string.IsNullOrWhiteSpace(adminPassword))
+            throw new InvalidOperationException("Seed:AdminPassword must be configured.");
+        var result = await userManager.CreateAsync(admin, adminPassword);
         if (result.Succeeded)
             await userManager.AddToRoleAsync(admin, "Admin");
     }
 
+    // Seed default operating hours (7 days) if not present
+    if (!await db.OperatingHours.AnyAsync())
+    {
+        var defaultHours = Enumerable.Range(0, 7).Select(dow => new MiquelonGolf.Api.Models.OperatingHours
+        {
+            DayOfWeek = dow,
+            IsOpen = dow != 1, // Closed Mondays by default
+            OpenTime = new TimeOnly(7, 0),
+            CloseTime = new TimeOnly(19, 0),
+            IntervalMinutes = 10,
+            MaxPlayers = 4
+        });
+        db.OperatingHours.AddRange(defaultHours);
+        await db.SaveChangesAsync();
+    }
+
     // Seed 18 holes if not present
-    if (!db.Holes.Any())
+    if (!await db.Holes.AnyAsync())
     {
         var holes = Enumerable.Range(1, 18).Select(n => new Hole
         {
@@ -125,7 +148,7 @@ using (var scope = app.Services.CreateScope())
             Description = string.Empty
         });
         db.Holes.AddRange(holes);
-        db.SaveChanges();
+        await db.SaveChangesAsync();
     }
 }
 
