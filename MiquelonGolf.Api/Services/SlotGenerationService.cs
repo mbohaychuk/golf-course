@@ -1,100 +1,113 @@
-// MiquelonGolf.Api/Services/SlotGenerationService.cs
 using Microsoft.EntityFrameworkCore;
 using MiquelonGolf.Api.Data;
+using MiquelonGolf.Api.Services;
 
 namespace MiquelonGolf.Api.Services;
 
-public class SlotGenerationService : BackgroundService
+public class SlotGenerationService(
+    IServiceScopeFactory scopeFactory,
+    ILogger<SlotGenerationService> logger) : BackgroundService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<SlotGenerationService> _logger;
-
-    public SlotGenerationService(IServiceScopeFactory scopeFactory, ILogger<SlotGenerationService> logger)
-    {
-        _scopeFactory = scopeFactory;
-        _logger = logger;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Small delay so the DB is fully migrated/seeded before first run
         await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+        await GenerateUpcomingSlots(stoppingToken);
 
-        await GenerateUpcomingSlots();
-
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(24));
+        using var timer = new PeriodicTimer(TimeSpan.FromHours(6));
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            await GenerateUpcomingSlots();
+            await GenerateUpcomingSlots(stoppingToken);
         }
     }
 
-    private async Task GenerateUpcomingSlots()
+    private async Task GenerateUpcomingSlots(CancellationToken ct)
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
+            using var scope = scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var teeTimeService = scope.ServiceProvider.GetRequiredService<ITeeTimeService>();
 
+            // Read booking window from settings (default 14 days)
+            var windowContent = await db.SiteContents.FindAsync(
+                new object[] { "settings.bookingWindowDays" }, ct);
+            var windowDays = windowContent != null && int.TryParse(windowContent.Value, out var wd) ? wd : 14;
+
             var today = DateOnly.FromDateTime(DateTime.Today);
-            var holidays = await db.CourseHolidays
-                .Where(h => h.Date >= today && h.Date <= today.AddDays(6))
+            var holidays = (await db.CourseHolidays
+                .Where(h => h.Date >= today && h.Date <= today.AddDays(windowDays))
+                .ToListAsync(ct))
                 .Select(h => h.Date)
-                .ToHashSetAsync();
+                .ToHashSet();
 
             var specialHours = await db.SpecialHours
-                .Where(s => s.Date >= today && s.Date <= today.AddDays(6))
-                .ToListAsync();
+                .Where(sh => sh.Date >= today && sh.Date <= today.AddDays(windowDays))
+                .ToListAsync(ct);
 
-            var schedule = await db.OperatingHours.ToListAsync();
+            var operatingHours = await db.OperatingHours.ToListAsync(ct);
 
-            for (int i = 0; i < 7; i++)
+            // Read default interval and max players from settings
+            var intervalContent = await db.SiteContents.FindAsync(
+                new object[] { "settings.teeTimeIntervalMinutes" }, ct);
+            var defaultInterval = intervalContent != null && int.TryParse(intervalContent.Value, out var iv) ? iv : 10;
+
+            var maxPlayersContent = await db.SiteContents.FindAsync(
+                new object[] { "settings.maxPlayersPerSlot" }, ct);
+            var defaultMaxPlayers = maxPlayersContent != null && int.TryParse(maxPlayersContent.Value, out var mp) ? mp : 4;
+
+            for (var i = 0; i <= windowDays; i++)
             {
                 var date = today.AddDays(i);
 
-                // Skip holidays
                 if (holidays.Contains(date)) continue;
 
-                // Skip dates that already have slots (preserve manual changes)
-                if (await db.TeeTimeSlots.AnyAsync(s => s.Date == date)) continue;
+                // Skip if ANY slots exist for this date (preserves manual edits)
+                var hasSlots = await db.TeeTimeSlots.AnyAsync(s => s.Date == date, ct);
+                if (hasSlots) continue;
 
-                // Determine open/close times — special hours take priority
-                var special = specialHours.FirstOrDefault(s => s.Date == date);
+                var special = specialHours.FirstOrDefault(sh => sh.Date == date);
+                var daySchedule = operatingHours.FirstOrDefault(oh => oh.DayOfWeek == (int)date.DayOfWeek);
+
                 TimeOnly openTime, closeTime;
-                int intervalMinutes, maxPlayers;
+                int interval, maxPlayers;
 
                 if (special != null)
                 {
                     openTime = special.OpenTime;
                     closeTime = special.CloseTime;
-                    // Use the regular schedule's interval/maxPlayers for that day of week
-                    var dow = (int)date.DayOfWeek;
-                    var reg = schedule.FirstOrDefault(s => s.DayOfWeek == dow);
-                    intervalMinutes = reg?.IntervalMinutes ?? 10;
-                    maxPlayers = reg?.MaxPlayers ?? 4;
+                    interval = daySchedule?.IntervalMinutes ?? defaultInterval;
+                    maxPlayers = daySchedule?.MaxPlayers ?? defaultMaxPlayers;
+                }
+                else if (daySchedule != null && daySchedule.IsOpen)
+                {
+                    openTime = daySchedule.OpenTime;
+                    closeTime = daySchedule.CloseTime;
+                    interval = daySchedule.IntervalMinutes;
+                    maxPlayers = daySchedule.MaxPlayers;
                 }
                 else
                 {
-                    var dow = (int)date.DayOfWeek;
-                    var reg = schedule.FirstOrDefault(s => s.DayOfWeek == dow);
-                    if (reg == null || !reg.IsOpen) continue;
-                    openTime = reg.OpenTime;
-                    closeTime = reg.CloseTime;
-                    intervalMinutes = reg.IntervalMinutes;
-                    maxPlayers = reg.MaxPlayers;
+                    continue; // Closed day
                 }
 
-                var slots = teeTimeService.GenerateSlots(date, intervalMinutes, openTime, closeTime, maxPlayers);
-                db.TeeTimeSlots.AddRange(slots);
-                _logger.LogInformation("Generated {Count} tee time slots for {Date}", slots.Count, date);
+                // Generate for Hole 1
+                var hole1Slots = teeTimeService.GenerateSlots(date, interval, openTime, closeTime, maxPlayers, 1);
+                db.TeeTimeSlots.AddRange(hole1Slots);
+
+                // Generate for Hole 10
+                var hole10Slots = teeTimeService.GenerateSlots(date, interval, openTime, closeTime, maxPlayers, 10);
+                db.TeeTimeSlots.AddRange(hole10Slots);
+
+                logger.LogInformation(
+                    "Generated {Hole1Count} Hole 1 + {Hole10Count} Hole 10 slots for {Date}",
+                    hole1Slots.Count, hole10Slots.Count, date);
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating tee time slots");
+            logger.LogError(ex, "Error generating upcoming tee time slots");
         }
     }
 }
