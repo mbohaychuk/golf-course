@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/admin/events',    label: 'Events' },
   { to: '/admin/content',   label: 'Content' },
   { to: '/admin/hours',     label: 'Hours' },
+  { to: '/admin/settings',  label: 'Settings' },
 ]
 </script>
 
@@ -49,5 +50,7 @@ const navLinks = [
     <main class="flex-1 overflow-auto">
       <slot />
     </main>
+
+    <UiToast />
   </div>
 </template>
