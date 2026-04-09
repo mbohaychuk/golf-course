@@ -7,7 +7,7 @@ public enum MembershipType
     Adult, Senior, Junior, Family, YoungAdult, SeniorCouple
 }
 
-public enum BookingStatus { Confirmed, Cancelled }
+public enum BookingStatus { Confirmed, Cancelled, NoShow }
 
 public enum AnnouncementType { CourseConditions, General, Closure }
 

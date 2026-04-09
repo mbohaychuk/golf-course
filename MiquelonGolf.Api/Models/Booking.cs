@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MiquelonGolf.Api.Models;
 
 public class Booking
@@ -12,4 +14,8 @@ public class Booking
     public int NumberOfPlayers { get; set; }
     public int NumberOfCarts { get; set; }
     public BookingStatus Status { get; set; } = BookingStatus.Confirmed;
+    public RoundType RoundType { get; set; } = RoundType.Eighteen;
+    public string? ReferralSource { get; set; }
+    [MaxLength(8)]
+    public string ConfirmationCode { get; set; } = string.Empty;
 }

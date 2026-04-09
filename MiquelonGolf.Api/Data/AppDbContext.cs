@@ -52,5 +52,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(b => b.TeeTimeSlot)
             .WithMany(s => s.Bookings)
             .HasForeignKey(b => b.TeeTimeSlotId);
+
+        builder.Entity<TeeTimeSlot>()
+            .HasIndex(s => new { s.Date, s.StartTime, s.StartingHole })
+            .IsUnique();
+
+        builder.Entity<TeeTimeSlot>()
+            .Property(s => s.StartingHole)
+            .HasDefaultValue(1);
+
+        builder.Entity<Booking>()
+            .HasIndex(b => b.ConfirmationCode);
     }
 }
