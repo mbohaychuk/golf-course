@@ -1,4 +1,3 @@
-// MiquelonGolf.Api/Services/TeeTimeService.cs
 using MiquelonGolf.Api.Models;
 
 namespace MiquelonGolf.Api.Services;
@@ -7,10 +6,12 @@ public class TeeTimeService : ITeeTimeService
 {
     public IReadOnlyList<TeeTimeSlot> GenerateSlots(
         DateOnly date, int intervalMinutes,
-        TimeOnly openTime, TimeOnly closeTime, int maxPlayers)
+        TimeOnly openTime, TimeOnly closeTime,
+        int maxPlayers, int startingHole = 1)
     {
         var slots = new List<TeeTimeSlot>();
         var current = openTime;
+
         while (current < closeTime)
         {
             slots.Add(new TeeTimeSlot
@@ -18,10 +19,12 @@ public class TeeTimeService : ITeeTimeService
                 Id = Guid.NewGuid(),
                 Date = date,
                 StartTime = current,
-                MaxPlayers = maxPlayers
+                MaxPlayers = maxPlayers,
+                StartingHole = startingHole
             });
             current = current.AddMinutes(intervalMinutes);
         }
+
         return slots;
     }
 }
