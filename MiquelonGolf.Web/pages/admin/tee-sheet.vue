@@ -10,7 +10,17 @@ const toast = useToast()
 
 // ── Date navigation ──────────────────────────────────────
 const today = new Date().toISOString().split('T')[0]
-const selectedDate = ref(today)
+// Honour ?date=YYYY-MM-DD when navigated here from the bookings search; fall
+// back to today otherwise.
+const route = useRoute()
+const initialDate = (() => {
+  const q = route.query.date
+  const candidate = Array.isArray(q) ? q[0] : q
+  return typeof candidate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(candidate)
+    ? candidate
+    : today
+})()
+const selectedDate = ref(initialDate)
 
 function goToday() { selectedDate.value = today }
 function goPrev() {
