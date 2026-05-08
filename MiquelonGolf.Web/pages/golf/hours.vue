@@ -11,7 +11,7 @@ const labels: Record<string, string> = {
   thursday: 'Thursday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday',
 }
 
-const allContent = await $fetch<{ key: string; value: string }[]>(api.url('/site-content')).catch(() => [])
+const allContent = await $fetch<{ key: string; value: string }[]>(api.url('/site-content/public')).catch(() => [])
 
 const hours = (day: string): string => {
   const entry = allContent.find(r => r?.key === `hours.${day}`)

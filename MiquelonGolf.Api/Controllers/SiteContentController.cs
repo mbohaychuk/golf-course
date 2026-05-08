@@ -16,12 +16,30 @@ public class SiteContentController : ControllerBase
     private readonly AppDbContext _db;
     public SiteContentController(AppDbContext db) => _db = db;
 
+    // Keys with these prefixes are safe to read anonymously — they back
+    // public-facing pages (fees, hours). Settings (settings.*) and any future
+    // admin-only content stay behind the Admin GetAll endpoint.
+    private static readonly string[] PublicKeyPrefixes = ["fees.", "hours."];
+
     [HttpGet("{key}")]
     public async Task<IActionResult> Get(string key)
     {
         var content = await _db.SiteContents.FindAsync(key);
         if (content == null) return NotFound();
         return Ok(new SiteContentResponse(content.Key, content.Value, content.LastUpdatedAt));
+    }
+
+    [HttpGet("public")]
+    public async Task<IActionResult> GetPublic()
+    {
+        var all = await _db.SiteContents
+            .AsNoTracking()
+            .OrderBy(c => c.Key)
+            .ToListAsync();
+        var publicEntries = all
+            .Where(c => PublicKeyPrefixes.Any(p => c.Key.StartsWith(p)))
+            .Select(c => new SiteContentResponse(c.Key, c.Value, c.LastUpdatedAt));
+        return Ok(publicEntries);
     }
 
     [HttpGet]

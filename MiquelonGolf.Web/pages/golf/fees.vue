@@ -6,7 +6,7 @@ useSeoMeta({
 
 const api = useApi()
 
-const allContent = await $fetch<{ key: string; value: string }[]>(api.url('/site-content')).catch(() => [])
+const allContent = await $fetch<{ key: string; value: string }[]>(api.url('/site-content/public')).catch(() => [])
 
 const fee = (key: string): string => {
   const entry = allContent.find(r => r?.key === key)
