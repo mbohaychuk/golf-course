@@ -69,11 +69,13 @@ const allTimes = computed(() => {
   return [...timeSet].sort()
 })
 
-/** Map slotId -> bookings for that slot */
+/** Map slotId -> bookings for that slot. Cancelled bookings drop off the
+ * sheet; no-shows stay visible so the slot continues to read as occupied
+ * (otherwise it shows as open and can be double-booked by a walk-in). */
 const bookingsBySlot = computed(() => {
   const map = new Map<string, BookingDto[]>()
   for (const b of bookings.value) {
-    if (b.status !== 'Confirmed') continue
+    if (b.status === 'Cancelled') continue
     const list = map.get(b.teeTimeSlotId) ?? []
     list.push(b)
     map.set(b.teeTimeSlotId, list)
@@ -532,7 +534,11 @@ async function generateSlots() {
                         </form>
                       </template>
                       <template v-else>
-                        <div class="flex items-center gap-2 cursor-pointer" @click="toggleActions(booking.id)">
+                        <div
+                          class="flex items-center gap-2"
+                          :class="booking.status === 'Confirmed' ? 'cursor-pointer' : 'opacity-60'"
+                          @click="booking.status === 'Confirmed' && toggleActions(booking.id)"
+                        >
                           <span class="font-semibold text-text text-sm truncate">{{ booking.golferName }}</span>
                           <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-bold bg-gray-100 text-text/70">
                             &times;{{ booking.numberOfPlayers }}
@@ -541,9 +547,13 @@ async function generateSlots() {
                             class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold"
                             :class="roundTypeBadge(booking.roundType).classes"
                           >{{ roundTypeBadge(booking.roundType).label }}</span>
+                          <span
+                            v-if="booking.status === 'NoShow'"
+                            class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800"
+                          >No-Show</span>
                         </div>
-                        <!-- Action menu -->
-                        <div v-if="activeBookingId === booking.id" class="mt-2 flex flex-wrap gap-1.5">
+                        <!-- Action menu (Confirmed bookings only) -->
+                        <div v-if="activeBookingId === booking.id && booking.status === 'Confirmed'" class="mt-2 flex flex-wrap gap-1.5">
                           <button class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium" @click="openEdit(booking)">Edit</button>
                           <button class="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium" @click="openMove(booking)">Move</button>
                           <button class="text-xs px-2 py-1 rounded bg-red-50 text-red-700 hover:bg-red-100 font-medium" @click="openCancel(booking)">Cancel</button>
@@ -687,7 +697,11 @@ async function generateSlots() {
                         </form>
                       </template>
                       <template v-else>
-                        <div class="flex items-center gap-2 cursor-pointer" @click="toggleActions(booking.id)">
+                        <div
+                          class="flex items-center gap-2"
+                          :class="booking.status === 'Confirmed' ? 'cursor-pointer' : 'opacity-60'"
+                          @click="booking.status === 'Confirmed' && toggleActions(booking.id)"
+                        >
                           <span class="font-semibold text-text text-sm truncate">{{ booking.golferName }}</span>
                           <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-bold bg-gray-100 text-text/70">
                             &times;{{ booking.numberOfPlayers }}
@@ -696,9 +710,13 @@ async function generateSlots() {
                             class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold"
                             :class="roundTypeBadge(booking.roundType).classes"
                           >{{ roundTypeBadge(booking.roundType).label }}</span>
+                          <span
+                            v-if="booking.status === 'NoShow'"
+                            class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800"
+                          >No-Show</span>
                         </div>
-                        <!-- Action menu -->
-                        <div v-if="activeBookingId === booking.id" class="mt-2 flex flex-wrap gap-1.5">
+                        <!-- Action menu (Confirmed bookings only) -->
+                        <div v-if="activeBookingId === booking.id && booking.status === 'Confirmed'" class="mt-2 flex flex-wrap gap-1.5">
                           <button class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium" @click="openEdit(booking)">Edit</button>
                           <button class="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium" @click="openMove(booking)">Move</button>
                           <button class="text-xs px-2 py-1 rounded bg-red-50 text-red-700 hover:bg-red-100 font-medium" @click="openCancel(booking)">Cancel</button>
