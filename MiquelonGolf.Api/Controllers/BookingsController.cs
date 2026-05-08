@@ -52,7 +52,9 @@ public class BookingsController(AppDbContext db) : ControllerBase
         if (isHoliday)
             return BadRequest("The course is closed on this date.");
 
-        var confirmed = slot.Bookings.Count(b => b.Status == BookingStatus.Confirmed);
+        var confirmed = slot.Bookings
+            .Where(b => b.Status == BookingStatus.Confirmed)
+            .Sum(b => b.NumberOfPlayers);
         if (confirmed + request.NumberOfPlayers > slot.MaxPlayers)
             return Conflict("Not enough spots available in this slot.");
 
@@ -185,7 +187,9 @@ public class BookingsController(AppDbContext db) : ControllerBase
         if (targetSlot.StartingHole != expectedHole)
             return BadRequest($"Cannot move to a slot with starting hole {targetSlot.StartingHole}. Booking requires hole {expectedHole}.");
 
-        var confirmed = targetSlot.Bookings.Count(b => b.Status == BookingStatus.Confirmed);
+        var confirmed = targetSlot.Bookings
+            .Where(b => b.Status == BookingStatus.Confirmed)
+            .Sum(b => b.NumberOfPlayers);
         if (confirmed + booking.NumberOfPlayers > targetSlot.MaxPlayers)
             return Conflict("Not enough spots in the target slot.");
 

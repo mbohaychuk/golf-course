@@ -37,7 +37,9 @@ public class TeeTimeSlotsController(AppDbContext db, ITeeTimeService teeTimeServ
             s.MaxPlayers,
             s.IsBlocked,
             s.BlockReason,
-            s.Bookings.Count(b => b.Status == BookingStatus.Confirmed),
+            // Number of golfers occupying the slot, not number of bookings — so a
+            // 4-cap slot with one foursome reports 4 (not 1) and reads as full.
+            s.Bookings.Where(b => b.Status == BookingStatus.Confirmed).Sum(b => b.NumberOfPlayers),
             s.StartingHole
         )).ToList());
     }

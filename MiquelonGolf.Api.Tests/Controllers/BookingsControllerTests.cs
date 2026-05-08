@@ -117,6 +117,95 @@ public class BookingsControllerTests : IClassFixture<TestWebAppFactory>
         _client.DefaultRequestHeaders.Authorization = null;
     }
 
+    [Fact]
+    public async Task CreateBooking_WhenSlotFullByExistingFoursome_RejectsAdditionalPlayer()
+    {
+        // A 4-cap slot already filled by a foursome must reject any further player,
+        // regardless of how many bookings the slot already contains.
+        var slotId = await SeedSlotAsync(FutureDate(8));
+
+        var first = await _client.PostAsJsonAsync("/api/bookings", new
+        {
+            teeTimeSlotId = slotId,
+            golferName = "Group A",
+            golferEmail = "a@example.com",
+            golferPhone = "780-555-0001",
+            numberOfPlayers = 4,
+            numberOfCarts = 0,
+            roundType = "Eighteen"
+        });
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+
+        var second = await _client.PostAsJsonAsync("/api/bookings", new
+        {
+            teeTimeSlotId = slotId,
+            golferName = "Late Walker",
+            golferEmail = "late@example.com",
+            golferPhone = "780-555-0002",
+            numberOfPlayers = 1,
+            numberOfCarts = 0,
+            roundType = "Eighteen"
+        });
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task MoveBooking_WhenTargetSlotFullByExistingFoursome_Rejects()
+    {
+        // Moving a booking into a slot already filled by a foursome must be rejected.
+        // Seed two hole-1 slots in one Generate call so the second slot persists.
+        var date = FutureDate(9);
+        var token = await AuthHelpers.GetAdminTokenAsync(_client);
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+        var gen = await _client.PostAsJsonAsync("/api/tee-time-slots/generate", new
+        {
+            date, intervalMinutes = 10,
+            openTime = "08:00", closeTime = "08:20", maxPlayers = 4
+        });
+        var allSlots = await gen.Content.ReadFromJsonAsync<List<SlotDto>>();
+        var hole1Slots = allSlots!
+            .Where(s => s.StartingHole == 1)
+            .OrderBy(s => s.StartTime)
+            .ToList();
+        var sourceId = hole1Slots[0].Id;
+        var targetId = hole1Slots[1].Id;
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        // Fill the target slot with a foursome.
+        await _client.PostAsJsonAsync("/api/bookings", new
+        {
+            teeTimeSlotId = targetId,
+            golferName = "Foursome",
+            golferEmail = "four@example.com",
+            golferPhone = "780-555-0003",
+            numberOfPlayers = 4,
+            numberOfCarts = 0,
+            roundType = "Eighteen"
+        });
+
+        // Place a single in the source slot, then try to move them.
+        var single = await _client.PostAsJsonAsync("/api/bookings", new
+        {
+            teeTimeSlotId = sourceId,
+            golferName = "Single",
+            golferEmail = "single@example.com",
+            golferPhone = "780-555-0004",
+            numberOfPlayers = 1,
+            numberOfCarts = 0,
+            roundType = "Eighteen"
+        });
+        var singleConfirmation = await single.Content.ReadFromJsonAsync<BookingConfirmationDto>();
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+        var move = await _client.PostAsJsonAsync($"/api/bookings/{singleConfirmation!.Id}/move",
+            new { targetTeeTimeSlotId = targetId });
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        Assert.Equal(HttpStatusCode.Conflict, move.StatusCode);
+    }
+
     private record SlotDto(Guid Id, string Date, string StartTime,
         int MaxPlayers, bool IsBlocked, string? BlockReason,
         int BookingCount, int StartingHole);
