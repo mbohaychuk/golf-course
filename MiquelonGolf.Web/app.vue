@@ -9,7 +9,8 @@ useHead({
 })
 
 useSeoMeta({
-  ogImage: `${siteUrl}/images/fairway-corridor.avif`,
+  ogImage: `${siteUrl}/og-default.jpg`,
+  ogImageType: 'image/jpeg',
   ogImageWidth: 1200,
   ogImageHeight: 630,
   ogType: 'website',

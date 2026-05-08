@@ -11,6 +11,11 @@ useSeoMeta({
 useHead({
   script: [{
     type: 'application/ld+json',
+    // Note: streetAddress, postalCode, and exact geo coordinates intentionally
+    // omitted until verified with the property — better to ship no value than
+    // the wrong one (Google validates and rounded coords hurt local relevance).
+    // Opening hours are also omitted because they vary by season and live in
+    // the admin-managed hours page; the static hours page uses real data.
     innerHTML: JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'GolfCourse',
@@ -19,23 +24,12 @@ useHead({
       url: 'https://miquelonhillsgolf.com',
       telephone: '+17804732511',
       email: 'info@miquelonhillsgolf.com',
-      image: 'https://miquelonhillsgolf.com/images/fairway-corridor.avif',
+      image: 'https://miquelonhillsgolf.com/og-default.jpg',
       address: {
         '@type': 'PostalAddress',
         addressLocality: 'Camrose County',
         addressRegion: 'AB',
         addressCountry: 'CA',
-      },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: 53.1,
-        longitude: -112.9,
-      },
-      openingHoursSpecification: {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-        opens: '07:00',
-        closes: '19:00',
       },
       priceRange: '$$',
       sameAs: [
