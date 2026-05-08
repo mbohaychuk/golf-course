@@ -8,6 +8,7 @@ useSeoMeta({ title: 'Content — Admin' })
 
 const api = useApi()
 const { authHeaders } = useAuth()
+const toast = useToast()
 
 // ─── Tab state ───────────────────────────────────────────────────────────
 type Tab = 'announcements' | 'content' | 'holes'
@@ -92,15 +93,27 @@ async function submitAnnForm() {
 }
 
 const annDeletingId = ref<string | null>(null)
+const pendingAnnDelete = ref<string | null>(null)
 
-async function deleteAnnouncement(id: string) {
-  if (!confirm('Delete this announcement?')) return
+function requestAnnDelete(id: string) {
+  pendingAnnDelete.value = id
+}
+
+function cancelAnnDelete() {
+  pendingAnnDelete.value = null
+}
+
+async function confirmAnnDelete() {
+  const id = pendingAnnDelete.value
+  if (!id) return
   annDeletingId.value = id
+  pendingAnnDelete.value = null
   try {
     await $fetch(api.url(`/announcements/${id}`), { method: 'DELETE', headers: authHeaders.value })
+    toast.success('Announcement deleted.')
     await loadAnnouncements()
   } catch (e: any) {
-    alert(e?.data?.title ?? e?.data?.detail ?? 'Could not delete announcement.')
+    toast.error(e?.data?.title ?? e?.data?.detail ?? 'Could not delete announcement.')
   } finally {
     annDeletingId.value = null
   }
@@ -323,7 +336,7 @@ watch(activeTab, (tab) => {
               <button
                 :disabled="annDeletingId === a.id"
                 class="text-xs text-red-600 hover:underline disabled:opacity-50"
-                @click="deleteAnnouncement(a.id)"
+                @click="requestAnnDelete(a.id)"
               >Delete</button>
             </div>
           </div>
@@ -427,5 +440,15 @@ watch(activeTab, (tab) => {
         <div v-if="holes.length === 0" class="p-8 text-center text-text/40 text-sm">No holes found.</div>
       </div>
     </div>
+
+    <UiConfirmModal
+      :open="pendingAnnDelete !== null"
+      title="Delete announcement?"
+      message="The announcement will stop showing on the public site. This cannot be undone."
+      confirm-text="Delete"
+      variant="danger"
+      @confirm="confirmAnnDelete"
+      @cancel="cancelAnnDelete"
+    />
   </div>
 </template>

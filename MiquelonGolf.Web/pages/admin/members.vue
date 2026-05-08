@@ -8,6 +8,7 @@ useSeoMeta({ title: 'Members — Admin' })
 
 const api = useApi()
 const { authHeaders } = useAuth()
+const toast = useToast()
 
 // --- List ---
 const members = ref<MemberDto[]>([])
@@ -127,15 +128,32 @@ async function submitForm() {
 
 // --- Delete ---
 const deletingId = ref<string | null>(null)
+const pendingDelete = ref<{ id: string; name: string } | null>(null)
+const deleteMessage = computed(() =>
+  pendingDelete.value
+    ? `Remove ${pendingDelete.value.name} from the members list? This cannot be undone.`
+    : ''
+)
 
-async function deleteMember(id: string, name: string) {
-  if (!confirm(`Remove ${name} from the members list?`)) return
-  deletingId.value = id
+function requestDelete(id: string, name: string) {
+  pendingDelete.value = { id, name }
+}
+
+function cancelDelete() {
+  pendingDelete.value = null
+}
+
+async function confirmDelete() {
+  const target = pendingDelete.value
+  if (!target) return
+  deletingId.value = target.id
+  pendingDelete.value = null
   try {
-    await $fetch(api.url(`/members/${id}`), { method: 'DELETE', headers: authHeaders.value })
+    await $fetch(api.url(`/members/${target.id}`), { method: 'DELETE', headers: authHeaders.value })
+    toast.success(`Removed ${target.name}.`)
     await loadMembers()
   } catch (e: any) {
-    alert(e?.data?.title ?? e?.data?.detail ?? 'Could not remove member. Please try again.')
+    toast.error(e?.data?.title ?? e?.data?.detail ?? 'Could not remove member. Please try again.')
   } finally {
     deletingId.value = null
   }
@@ -263,7 +281,7 @@ const membershipTypes = ['Adult', 'Senior', 'Junior', 'Family', 'YoungAdult', 'S
               <button
                 :disabled="deletingId === m.id"
                 class="text-xs text-red-600 hover:underline disabled:opacity-50"
-                @click="deleteMember(m.id, `${m.firstName} ${m.lastName}`)"
+                @click="requestDelete(m.id, `${m.firstName} ${m.lastName}`)"
               >
                 Remove
               </button>
@@ -272,5 +290,15 @@ const membershipTypes = ['Adult', 'Senior', 'Junior', 'Family', 'YoungAdult', 'S
         </tbody>
       </table>
     </div>
+
+    <UiConfirmModal
+      :open="pendingDelete !== null"
+      title="Remove member?"
+      :message="deleteMessage"
+      confirm-text="Remove"
+      variant="danger"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>

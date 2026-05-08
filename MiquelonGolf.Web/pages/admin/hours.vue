@@ -6,6 +6,7 @@ useSeoMeta({ title: 'Hours & Availability — Admin' })
 
 const { authHeaders } = useAuth()
 const api = useApi()
+const toast = useToast()
 
 type Tab = 'schedule' | 'holidays' | 'special'
 const activeTab = ref<Tab>('schedule')
@@ -87,13 +88,17 @@ async function addHoliday() {
   }
 }
 
-async function deleteHoliday(id: string) {
-  if (!confirm('Remove this holiday?')) return
+function requestDeleteHoliday(id: string) {
+  pendingDelete.value = { kind: 'holiday', id }
+}
+
+async function deleteHolidayConfirmed(id: string) {
   try {
     await api.del(`/course-hours/holidays/${id}`, authHeaders.value)
     holidays.value = holidays.value.filter(h => h.id !== id)
+    toast.success('Holiday removed.')
   } catch {
-    alert('Could not remove holiday.')
+    toast.error('Could not remove holiday.')
   }
 }
 
@@ -161,14 +166,38 @@ function cancelSpecialEdit() {
   specialError.value = null
 }
 
-async function deleteSpecial(id: string) {
-  if (!confirm('Remove these special hours?')) return
+function requestDeleteSpecial(id: string) {
+  pendingDelete.value = { kind: 'special', id }
+}
+
+async function deleteSpecialConfirmed(id: string) {
   try {
     await api.del(`/course-hours/special/${id}`, authHeaders.value)
     specialHours.value = specialHours.value.filter(s => s.id !== id)
+    toast.success('Special hours removed.')
   } catch {
-    alert('Could not remove special hours.')
+    toast.error('Could not remove special hours.')
   }
+}
+
+// ── Delete confirmation (shared between holidays and special hours) ──────
+type DeleteKind = 'holiday' | 'special'
+const pendingDelete = ref<{ kind: DeleteKind; id: string } | null>(null)
+const deleteTitle = computed(() =>
+  pendingDelete.value?.kind === 'holiday' ? 'Remove holiday?' : 'Remove special hours?'
+)
+const deleteMessage = computed(() =>
+  pendingDelete.value?.kind === 'holiday'
+    ? 'The course will be open on this date again unless another override is added.'
+    : 'The schedule for this date will revert to the regular weekly hours.'
+)
+function cancelDelete() { pendingDelete.value = null }
+async function confirmDelete() {
+  const target = pendingDelete.value
+  if (!target) return
+  pendingDelete.value = null
+  if (target.kind === 'holiday') await deleteHolidayConfirmed(target.id)
+  else await deleteSpecialConfirmed(target.id)
 }
 
 watch(activeTab, tab => {
@@ -314,7 +343,7 @@ watch(activeTab, tab => {
         >
           <span class="text-sm font-mono font-medium" style="color: var(--color-primary);">{{ h.date }}</span>
           <span class="text-sm flex-1" style="color: var(--color-text);">{{ h.reason }}</span>
-          <button class="text-xs text-red-500 hover:text-red-700" @click="deleteHoliday(h.id)">Remove</button>
+          <button class="text-xs text-red-500 hover:text-red-700" @click="requestDeleteHoliday(h.id)">Remove</button>
         </div>
       </div>
     </div>
@@ -376,9 +405,19 @@ watch(activeTab, tab => {
           <span class="text-sm" style="color: color-mix(in srgb, var(--color-text) 65%, transparent);">{{ s.openTime }} – {{ s.closeTime }}</span>
           <span class="text-sm flex-1" style="color: var(--color-text);">{{ s.reason }}</span>
           <button class="text-xs hover:underline mr-2" style="color: var(--color-primary);" @click="editSpecial(s)">Edit</button>
-          <button class="text-xs text-red-500 hover:text-red-700" @click="deleteSpecial(s.id)">Remove</button>
+          <button class="text-xs text-red-500 hover:text-red-700" @click="requestDeleteSpecial(s.id)">Remove</button>
         </div>
       </div>
     </div>
+
+    <UiConfirmModal
+      :open="pendingDelete !== null"
+      :title="deleteTitle"
+      :message="deleteMessage"
+      confirm-text="Remove"
+      variant="danger"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>

@@ -8,6 +8,7 @@ useSeoMeta({ title: 'Events — Admin' })
 
 const api = useApi()
 const { authHeaders } = useAuth()
+const toast = useToast()
 
 // --- List ---
 const events = ref<EventDto[]>([])
@@ -101,15 +102,32 @@ async function submitForm() {
 
 // --- Delete ---
 const deletingId = ref<string | null>(null)
+const pendingDelete = ref<{ id: string; title: string } | null>(null)
+const deleteMessage = computed(() =>
+  pendingDelete.value
+    ? `Delete "${pendingDelete.value.title}"? This cannot be undone.`
+    : ''
+)
 
-async function deleteEvent(id: string, title: string) {
-  if (!confirm(`Delete "${title}"?`)) return
-  deletingId.value = id
+function requestDelete(id: string, title: string) {
+  pendingDelete.value = { id, title }
+}
+
+function cancelDelete() {
+  pendingDelete.value = null
+}
+
+async function confirmDelete() {
+  const target = pendingDelete.value
+  if (!target) return
+  deletingId.value = target.id
+  pendingDelete.value = null
   try {
-    await $fetch(api.url(`/events/${id}`), { method: 'DELETE', headers: authHeaders.value })
+    await $fetch(api.url(`/events/${target.id}`), { method: 'DELETE', headers: authHeaders.value })
+    toast.success(`Deleted "${target.title}".`)
     await loadEvents()
   } catch (e: any) {
-    alert(e?.data?.title ?? e?.data?.detail ?? 'Could not delete event. Please try again.')
+    toast.error(e?.data?.title ?? e?.data?.detail ?? 'Could not delete event. Please try again.')
   } finally {
     deletingId.value = null
   }
@@ -219,7 +237,7 @@ const categories = ['Tournament', 'SocialNight', 'LadiesNight', 'MensNight', 'Ot
                 <button
                   :disabled="deletingId === e.id"
                   class="text-xs text-red-600 hover:underline disabled:opacity-50"
-                  @click="deleteEvent(e.id, e.title)"
+                  @click="requestDelete(e.id, e.title)"
                 >
                   Delete
                 </button>
@@ -229,5 +247,15 @@ const categories = ['Tournament', 'SocialNight', 'LadiesNight', 'MensNight', 'Ot
         </tbody>
       </table>
     </div>
+
+    <UiConfirmModal
+      :open="pendingDelete !== null"
+      title="Delete event?"
+      :message="deleteMessage"
+      confirm-text="Delete"
+      variant="danger"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
