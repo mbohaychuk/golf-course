@@ -75,6 +75,9 @@ export interface BookingConfirmationDto {
   slotDate: string
   slotTime: string
   startingHole: number
+  golferName: string
+  golferEmail: string
+  golferPhone: string
   numberOfPlayers: number
   numberOfCarts: number
   status: string

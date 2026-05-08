@@ -124,6 +124,7 @@ public class BookingsControllerTests : IClassFixture<TestWebAppFactory>
     private record BookingConfirmationDto(
         Guid Id, string ConfirmationCode,
         string SlotDate, string SlotTime, int StartingHole,
+        string GolferName, string GolferEmail, string GolferPhone,
         int NumberOfPlayers, int NumberOfCarts,
         string Status, string RoundType);
 

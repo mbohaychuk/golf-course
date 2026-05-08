@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import type {
   TeeTimeSlotDto,
-  BookingDto,
+  BookingConfirmationDto,
   BookingSettingsDto,
   OperatingHoursDto,
   CourseHolidayDto,
@@ -38,13 +38,13 @@ const maxDate = computed(() => {
 })
 
 // Operating hours — derive closed day-of-week numbers
-const { data: operatingHours } = api.get<OperatingHoursDto[]>('/operating-hours')
+const { data: operatingHours } = api.get<OperatingHoursDto[]>('/course-hours/schedule')
 const closedDays = computed(() =>
   (operatingHours.value ?? []).filter(h => !h.isOpen).map(h => h.dayOfWeek)
 )
 
 // Course holidays
-const { data: holidaysRaw } = api.get<CourseHolidayDto[]>('/course-holidays')
+const { data: holidaysRaw } = api.get<CourseHolidayDto[]>('/course-hours/holidays')
 const holidays = computed(() => (holidaysRaw.value ?? []).map(h => h.date))
 
 // Tee time slots — refetch when date or roundType changes
@@ -117,7 +117,7 @@ const submitting = ref(false)
 const submitError = ref<string | null>(null)
 
 // ── Step 3: Confirmation ───────────────────────────────────
-const booking = ref<BookingDto | null>(null)
+const booking = ref<BookingConfirmationDto | null>(null)
 
 const formattedBookingDate = computed(() => {
   if (!booking.value) return ''
@@ -150,7 +150,7 @@ const googleCalendarUrl = computed(() => {
 const roundTypeLabel = computed(() => {
   const labels: Record<RoundType, string> = {
     Eighteen: '18 Holes',
-    FrontNine: '9 Holes (Front)',
+    FrontNine: 'Front 9',
     BackNine: 'Back 9',
   }
   return labels[roundType.value]
@@ -175,7 +175,7 @@ async function submitBooking() {
       roundType: roundType.value,
       referralSource: form.referralSource,
     }
-    booking.value = await api.post<BookingDto>('/bookings', payload)
+    booking.value = await api.post<BookingConfirmationDto>('/bookings', payload)
     step.value = 3
     clearSessionStorage()
   } catch (e: any) {
@@ -403,7 +403,7 @@ const referralOptions = [
                   required
                   class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                   :class="formErrors.golferPhone ? 'border-red-500' : 'border-primary/20'"
-                  placeholder="(780) 555-0100"
+                  placeholder="(780) 123-4567"
                   @blur="validateField('golferPhone')"
                 />
                 <p v-if="formErrors.golferPhone" class="text-red-500 text-xs mt-1">{{ formErrors.golferPhone }}</p>
@@ -508,7 +508,8 @@ const referralOptions = [
         <p class="text-text/50 text-xs mb-6">Confirmation Code</p>
 
         <p class="text-text/70 text-sm mb-8">
-          A confirmation has been sent to <span class="font-semibold">{{ booking.golferEmail }}</span>.
+          Save your confirmation code &mdash; please show it at the pro shop on arrival.
+          We'll have your tee time ready under <span class="font-semibold">{{ booking.golferName }}</span>.
         </p>
 
         <!-- Booking details summary -->
