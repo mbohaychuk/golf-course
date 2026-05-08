@@ -5,7 +5,7 @@ const model = defineModel<RoundType>({ required: true })
 
 const options: { value: RoundType; label: string; sub: string }[] = [
   { value: 'Eighteen', label: '18 Holes', sub: 'Full round' },
-  { value: 'FrontNine', label: '9 Holes', sub: 'Holes 1–9' },
+  { value: 'FrontNine', label: 'Front 9', sub: 'Holes 1–9' },
   { value: 'BackNine', label: 'Back 9', sub: 'Holes 10–18' },
 ]
 </script>

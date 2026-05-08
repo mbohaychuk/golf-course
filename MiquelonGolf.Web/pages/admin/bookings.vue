@@ -411,11 +411,11 @@ async function submitWalkIn() {
         </div>
         <div>
           <label class="block text-xs font-medium text-text/60 mb-1" for="wi-phone">Phone</label>
-          <input id="wi-phone" v-model="walkInForm.golferPhone" type="tel" required placeholder="(780) 555-0100" class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+          <input id="wi-phone" v-model="walkInForm.golferPhone" type="tel" required placeholder="(780) 123-4567" class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
         </div>
         <div>
           <label class="block text-xs font-medium text-text/60 mb-1" for="wi-email">Email</label>
-          <input id="wi-email" v-model="walkInForm.golferEmail" type="email" required placeholder="golfer@email.com" class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+          <input id="wi-email" v-model="walkInForm.golferEmail" type="email" required placeholder="name@example.ca" class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
         </div>
         <div>
           <label class="block text-xs font-medium text-text/60 mb-1" for="wi-round-type">Round Type</label>

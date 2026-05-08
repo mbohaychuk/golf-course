@@ -30,7 +30,7 @@
           <li><NuxtLink to="/golf/fees" class="hover:text-white transition-colors">Fees &amp; Memberships</NuxtLink></li>
           <li><NuxtLink to="/golf/course" class="hover:text-white transition-colors">Course Layout</NuxtLink></li>
           <li><NuxtLink to="/events" class="hover:text-white transition-colors">Events</NuxtLink></li>
-          <li><NuxtLink to="/rv" class="hover:text-white transition-colors">Stay &amp; Play RV</NuxtLink></li>
+          <li><NuxtLink to="/rv" class="hover:text-white transition-colors">Stay &amp; Play</NuxtLink></li>
           <li><NuxtLink to="/contact" class="hover:text-white transition-colors">Contact</NuxtLink></li>
         </ul>
       </div>

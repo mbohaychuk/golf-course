@@ -9,7 +9,7 @@ defineProps<{
 
 const roundLabels: Record<RoundType, string> = {
   Eighteen: '18 Holes',
-  FrontNine: '9 Holes (Front)',
+  FrontNine: 'Front 9',
   BackNine: 'Back 9',
 }
 

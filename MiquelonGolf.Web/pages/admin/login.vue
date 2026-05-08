@@ -49,7 +49,7 @@ async function handleLogin() {
             required
             autofocus
             class="w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            placeholder="admin@example.com"
+            placeholder="Email address"
           >
         </div>
 
