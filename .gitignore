@@ -415,7 +415,6 @@ FodyWeavers.xsd
 ## Visual studio for Mac
 ##
 
-
 # globs
 Makefile.in
 *.userprefs
@@ -437,7 +436,6 @@ test-results/
 
 # Icon must end with two \r
 Icon
-
 
 # Thumbnails
 ._*
@@ -485,7 +483,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-
 .worktrees/
 Media/
 docs/
+MiquelonGolf.Api/appsettings.Development.json
